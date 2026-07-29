@@ -1,0 +1,16 @@
+# IDE
+.vs/
+*.user
+*.suo
+
+# Build
+**/bin/
+**/obj/
+
+# Logs
+stderr-*.txt
+stdout-*.txt
+
+# Design docs (internal, not source)
+docs/
+UserManagementPoC-Vision.md

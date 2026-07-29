@@ -1,0 +1,6 @@
+@UserManagementPoC.WorkflowClient_HostAddress = http://localhost:5077
+
+GET {{UserManagementPoC.WorkflowClient_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

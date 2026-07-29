@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/Core/">
+    <Project Path="Core/Identity/Identity.csproj" />
+    <Project Path="Core/UserManagementAdmin/UserManagementAdmin.csproj" />
+    <Project Path="Core/WorkflowClient/WorkflowClient.csproj" />
+  </Folder>
+  <Folder Name="/Shared/">
+    <Project Path="Shared/Security/Security.csproj" />
+    <Project Path="Shared/Shared/Shared.csproj" />
+    <Project Path="Shared/Authorization/Authorization.csproj" />
+  </Folder>
+  <Folder Name="/Tests/" />
+  <Project Path="AppHost/AppHost.csproj" />
+  <Project Path="ServiceDefaults/ServiceDefaults.csproj" />
+</Solution>

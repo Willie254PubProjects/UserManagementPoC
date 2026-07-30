@@ -10,10 +10,10 @@ using UserManagementPoC.Shared.Authorization.Models;
 
 namespace UserManagementPoC.Shared.Authorization.Client;
 
-internal class WorkflowAuthorizationPolicyProvider : IAuthorizationPolicyProvider
+internal class AuthorizationPolicyProvider : IAuthorizationPolicyProvider
 {
     private readonly DefaultAuthorizationPolicyProvider _fallback;
-    public WorkflowAuthorizationPolicyProvider(IOptions<AuthorizationOptions> options)
+    public AuthorizationPolicyProvider(IOptions<AuthorizationOptions> options)
     {
         _fallback = new DefaultAuthorizationPolicyProvider(options);
 

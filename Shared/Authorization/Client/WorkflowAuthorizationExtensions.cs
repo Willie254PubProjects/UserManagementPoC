@@ -8,8 +8,9 @@ using UserManagementPoC.Shared.Authorization.Helpers;
 
 namespace UserManagementPoC.Shared.Authorization.Client;
 
-using MicrosoftAuthorizationService = Microsoft.AspNetCore.Authorization.IAuthorizationHandler;
-using MicrosoftAuthPolicyProvider = Microsoft.AspNetCore.Authorization.IAuthorizationPolicyProvider;
+using AuthHandler = Microsoft.AspNetCore.Authorization.IAuthorizationHandler;
+using AuthPolicyProvider = Microsoft.AspNetCore.Authorization.IAuthorizationPolicyProvider;
+
 public static class WorkflowAuthorizationExtensions
 {
     public static IServiceCollection AddWorkflowAuthorization(this IServiceCollection services, Action<WorkflowAuthorizationOptions>? configureOptions = null)
@@ -17,7 +18,7 @@ public static class WorkflowAuthorizationExtensions
         var options = new WorkflowAuthorizationOptions();
         configureOptions?.Invoke(options);
         services.AddSingleton(options);
-        services.AddHttpClient<IAuthorizationEvaluator, AuthorizationClient>(client =>
+        services.AddHttpClient<Contracts.IAuthorizationEvaluator, AuthorizationClient>(client =>
         {
             if (!string.IsNullOrEmpty(options.Authority))
             {
@@ -27,8 +28,8 @@ public static class WorkflowAuthorizationExtensions
         });
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentUser, CurrentUser>();
-        services.AddScoped<MicrosoftAuthorizationService, WorkflowAuthorizationHandler>();
-        services.AddSingleton<MicrosoftAuthPolicyProvider, WorkflowAuthorizationPolicyProvider>();
+        services.AddScoped<AuthHandler, AuthorizationEvaluationHandler>();
+        services.AddSingleton<AuthPolicyProvider, AuthorizationPolicyProvider>();
         return services;
 
     }

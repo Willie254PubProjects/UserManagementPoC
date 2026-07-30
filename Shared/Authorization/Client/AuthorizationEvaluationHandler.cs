@@ -15,13 +15,13 @@ using UserManagementPoC.Shared.Authorization.Models;
 namespace UserManagementPoC.Shared.Authorization.Client;
 
 using AuthorizationEvaluator = Contracts.IAuthorizationEvaluator;
-internal class WorkflowAuthorizationHandler : AuthorizationHandler<WorkflowAuthorizationRequirement>
+internal class AuthorizationEvaluationHandler : AuthorizationHandler<WorkflowAuthorizationRequirement>
 {
     private readonly AuthorizationEvaluator _evaluator;
     private readonly IWorkflowContextResolver _workflowContextResolver;
     private readonly ICurrentUser _currentUser;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    public WorkflowAuthorizationHandler(AuthorizationEvaluator evaluator, IWorkflowContextResolver workflowContextResolver, ICurrentUser currentUser, IHttpContextAccessor httpContextAccessor)
+    public AuthorizationEvaluationHandler(AuthorizationEvaluator evaluator, IWorkflowContextResolver workflowContextResolver, ICurrentUser currentUser, IHttpContextAccessor httpContextAccessor)
     {
         _evaluator = evaluator;
         _workflowContextResolver = workflowContextResolver;

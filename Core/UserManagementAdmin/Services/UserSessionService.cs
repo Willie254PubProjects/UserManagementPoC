@@ -38,7 +38,15 @@ public class UserSessionService
     }
     public async Task<UserSession?> GetBySecurityVersionAsync(string securityVersion)
     {
-        return await _context.Set<UserSession>().FirstOrDefaultAsync(s => s.SecurityVersion == securityVersion);
+        var session = await _context.Set<UserSession>().FirstOrDefaultAsync(s => s.SecurityVersion == securityVersion);
+        if (session != null)
+        {
+            session.LastAccessedAt = DateTime.UtcNow;
+            session.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
+        }
+        return session;
 
     }
     public async Task<bool> InvalidateAsync(string securityVersion)

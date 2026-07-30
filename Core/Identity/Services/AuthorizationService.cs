@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Http;
 
+using UserManagementPoC.Shared.Abstractions;
+
 using UserManagementPoC.Shared.Authorization.Contracts;
 
 using UserManagementPoC.Shared.Authorization.Enums;
@@ -12,10 +14,14 @@ public class AuthorizationService : IAuthorizationEvaluator
 {
     private readonly IUserManagementApiClient _userManagementClient;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    public AuthorizationService(IUserManagementApiClient userManagementClient, IHttpContextAccessor httpContextAccessor)
+    private readonly ICacheService _cache;
+    private static readonly TimeSpan PermissionCacheTtl = TimeSpan.FromMinutes(3);
+
+    public AuthorizationService(IUserManagementApiClient userManagementClient, IHttpContextAccessor httpContextAccessor, ICacheService cache)
     {
         _userManagementClient = userManagementClient;
         _httpContextAccessor = httpContextAccessor;
+        _cache = cache;
 
     }
     public async Task<AuthorizationResult> EvaluateAsync(AuthorizationContext context, CancellationToken cancellationToken = default)
@@ -29,14 +35,14 @@ public class AuthorizationService : IAuthorizationEvaluator
         if (context.Roles.Any())
         {
             var userRoles = await _userManagementClient.GetUserRolesAsync(context.UserId, cancellationToken);
-            var matches = context.Roles.Count(r => userRoles.Contains(r));
+            var matches = context.Roles.Count(r => userRoles.Any(ur => string.Equals(ur, r, StringComparison.OrdinalIgnoreCase)));
             var passed = context.Operator == AuthOperator.Or ? matches > 0 : matches == context.Roles.Count();
             if (!passed) return AuthorizationResult.Denied("User lacks required roles");
 
         }
         if (context.Permissions.Any() || context.Workflow != null)
         {
-            var userPermissions = await _userManagementClient.GetUserPermissionsAsync(context.UserId, cancellationToken);
+            var userPermissions = await GetCachedPermissionsAsync(context.UserId, tokenSecurityVersion, cancellationToken);
             var requiredPermissions = new List<string>();
             if (context.Permissions.Any())
             {
@@ -49,7 +55,7 @@ public class AuthorizationService : IAuthorizationEvaluator
                 requiredPermissions.Add(workflowPermission);
 
             }
-            var matches = requiredPermissions.Count(p => userPermissions.Contains(p));
+            var matches = requiredPermissions.Count(req => userPermissions.Any(stored => PermissionMatches(req, stored)));
             var passed = context.Operator == AuthOperator.Or ? matches > 0 : matches == requiredPermissions.Count;
             if (!passed) return AuthorizationResult.Denied("User lacks required permissions");
 
@@ -61,5 +67,26 @@ public class AuthorizationService : IAuthorizationEvaluator
         }
 
         return AuthorizationResult.Allowed();
+    }
+
+    private async Task<IReadOnlySet<string>> GetCachedPermissionsAsync(string userId, string securityVersion, CancellationToken cancellationToken)
+    {
+        var cacheKey = $"permissions:{userId}:{securityVersion}";
+        var cached = await _cache.GetAsync<IReadOnlySet<string>>(cacheKey, cancellationToken);
+        if (cached != null) return cached;
+
+        var permissions = await _userManagementClient.GetUserPermissionsAsync(userId, cancellationToken);
+        await _cache.SetAsync(cacheKey, permissions, PermissionCacheTtl, cancellationToken);
+        return permissions;
+    }
+
+    private static bool PermissionMatches(string required, string stored)
+    {
+        if (required.EndsWith(".*"))
+        {
+            var prefix = required[..^1];
+            return stored.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
+        }
+        return string.Equals(required, stored, StringComparison.OrdinalIgnoreCase);
     }
 }

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using UserManagementAdmin.Extensions;
 using UserManagementAdmin.Models.Requests;
@@ -6,6 +7,7 @@ using UserManagementPoC.Shared.Extensions;
 
 namespace UserManagementAdmin.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/users")]
 public class UsersController : ControllerBase

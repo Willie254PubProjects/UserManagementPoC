@@ -18,6 +18,7 @@ public static class WorkflowAuthorizationExtensions
         var options = new WorkflowAuthorizationOptions();
         configureOptions?.Invoke(options);
         services.AddSingleton(options);
+        services.AddTransient<BearerTokenHandler>();
         services.AddHttpClient<Contracts.IAuthorizationEvaluator, AuthorizationClient>(client =>
         {
             if (!string.IsNullOrEmpty(options.Authority))
@@ -25,7 +26,7 @@ public static class WorkflowAuthorizationExtensions
                 client.BaseAddress = new Uri(options.Authority);
 
             }
-        });
+        }).AddHttpMessageHandler<BearerTokenHandler>();
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentUser, CurrentUser>();
         services.AddScoped<AuthHandler, AuthorizationEvaluationHandler>();

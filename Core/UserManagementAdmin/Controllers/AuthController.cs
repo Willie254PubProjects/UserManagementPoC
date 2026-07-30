@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using UserManagementAdmin.Models.Entities;
@@ -9,6 +10,7 @@ using UserManagementPoC.Shared.Security.Models;
 
 namespace UserManagementAdmin.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/auth")]
 public class AuthController : ControllerBase
@@ -28,6 +30,7 @@ public class AuthController : ControllerBase
         _permissionAssignmentService = permissionAssignmentService;
     }
 
+    [AllowAnonymous]
     [HttpPost("verify-credentials")]
     public async Task<IActionResult> VerifyCredentials([FromBody] VerifyCredentialsRequest request)
     {
@@ -75,6 +78,7 @@ public class AuthController : ControllerBase
         });
     }
 
+    [AllowAnonymous]
     [HttpPost("sessions")]
     public async Task<IActionResult> CreateSession([FromBody] CreateSessionRequest request)
     {

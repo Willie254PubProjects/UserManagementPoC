@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using UserManagementAdmin.Models.Requests;
 using UserManagementAdmin.Services.Interfaces;
@@ -5,6 +6,7 @@ using UserManagementPoC.Shared.Extensions;
 
 namespace UserManagementAdmin.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/permission-types")]
 public class PermissionTypesController : ControllerBase

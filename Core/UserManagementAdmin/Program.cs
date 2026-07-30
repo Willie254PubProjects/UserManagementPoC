@@ -1,5 +1,8 @@
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using UserManagementAdmin.Data;
 using UserManagementAdmin.Models.Entities;
@@ -14,7 +17,20 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 builder.Services.AddDbContext<AdminDbContext>(options => options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddIdentity<BshUser, BshRole>().AddEntityFrameworkStores<AdminDbContext>();
-builder.Services.AddControllersWithViews();
+var jwtSettings = builder.Configuration.GetSection("JwtSettings");
+ var secretKey = Encoding.UTF8.GetBytes(jwtSettings["SecretKey"]!);
+ builder.Services.AddAuthentication(options => {
+ options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+ options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+
+}).AddJwtBearer(options => {
+ options.TokenValidationParameters = new TokenValidationParameters {
+ ValidateIssuer = true, ValidateAudience = true, ValidateLifetime = true, ValidateIssuerSigningKey = true, ValidIssuer = jwtSettings["Issuer"], ValidAudience = jwtSettings["Audience"], IssuerSigningKey = new SymmetricSecurityKey(secretKey) 
+};
+
+});
+ builder.Services.AddAuthorization();
+ builder.Services.AddControllersWithViews();
 builder.Services.AddOpenApi();
 builder.Services.AddRepositories<AdminDbContext>();
 builder.Services.AddScoped<IKeyVaultService, ConfigKeyVaultService>();
@@ -50,6 +66,7 @@ else
 
 app.UseHttpsRedirection();
 app.UseRouting();
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapStaticAssets();
 app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}").WithStaticAssets();

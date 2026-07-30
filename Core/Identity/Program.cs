@@ -43,10 +43,11 @@ var builder = WebApplication.CreateBuilder(args);
  builder.Services.AddSingleton<ICacheService, MemoryCacheService>();
  builder.Services.AddSingleton<RefreshTokenService>();
  builder.Services.AddScoped<ClaimsFactory>();
+builder.Services.AddTransient<UserManagementTokenHandler>();
  builder.Services.AddHttpClient<UserManagementApiClient>(client => {
  client.BaseAddress = new Uri("https://localhost:7137");
- 
-}).AddStandardResilienceHandler();
+
+}).AddHttpMessageHandler<UserManagementTokenHandler>().AddStandardResilienceHandler();
  builder.Services.AddScoped<IUserManagementApiClient>(sp => sp.GetRequiredService<UserManagementApiClient>());
  builder.Services.AddScoped<IAuthorizationEvaluator, AuthorizationService>();
  var app = builder.Build();

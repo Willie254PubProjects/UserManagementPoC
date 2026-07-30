@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using UserManagementAdmin.Extensions;
 using UserManagementAdmin.Models.Requests;
-using UserManagementAdmin.Services;
+using UserManagementAdmin.Services.Interfaces;
 using UserManagementPoC.Shared.Extensions;
 
 namespace UserManagementAdmin.Controllers;
@@ -10,17 +10,17 @@ namespace UserManagementAdmin.Controllers;
 [Route("api/users")]
 public class UsersController : ControllerBase
 {
-    private readonly UserService _userService;
+    private readonly IUserService _userService;
 
-    public UsersController(UserService userService)
+    public UsersController(IUserService userService)
     {
         _userService = userService;
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
-        var users = await _userService.GetAllAsync();
+        var users = await _userService.GetAllAsync(page, pageSize);
         return this.ApiOk(users);
     }
 

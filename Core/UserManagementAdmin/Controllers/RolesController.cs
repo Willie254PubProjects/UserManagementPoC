@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using UserManagementAdmin.Extensions;
 using UserManagementAdmin.Models.Requests;
-using UserManagementAdmin.Services;
+using UserManagementAdmin.Services.Interfaces;
 using UserManagementPoC.Shared.Extensions;
 
 namespace UserManagementAdmin.Controllers;
@@ -10,19 +10,19 @@ namespace UserManagementAdmin.Controllers;
 [Route("api/roles")]
 public class RolesController : ControllerBase
 {
-    private readonly RoleService _roleService;
-    private readonly PermissionAssignmentService _permissionAssignmentService;
+    private readonly IRoleService _roleService;
+    private readonly IPermissionAssignmentService _permissionAssignmentService;
 
-    public RolesController(RoleService roleService, PermissionAssignmentService permissionAssignmentService)
+    public RolesController(IRoleService roleService, IPermissionAssignmentService permissionAssignmentService)
     {
         _roleService = roleService;
         _permissionAssignmentService = permissionAssignmentService;
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
-        var roles = await _roleService.GetAllAsync();
+        var roles = await _roleService.GetAllAsync(page, pageSize);
         return this.ApiOk(roles);
     }
 

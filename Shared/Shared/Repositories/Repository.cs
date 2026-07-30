@@ -37,6 +37,8 @@ namespace UserManagementPoC.Shared.Repositories
 
         }
         public async Task<bool> AnyAsync(Expression<Func<T, bool>> predicate) => await _dbSet.AnyAsync(predicate);
+        public async Task<int> CountAsync(Expression<Func<T, bool>>? predicate = null)
+            => predicate is null ? await _dbSet.CountAsync() : await _dbSet.CountAsync(predicate);
         public async Task AddAsync(T entity) => await _dbSet.AddAsync(entity);
         public async Task AddRangeAsync(IEnumerable<T> entities) => await _dbSet.AddRangeAsync(entities);
         public void Update(T entity) => _dbSet.Update(entity);

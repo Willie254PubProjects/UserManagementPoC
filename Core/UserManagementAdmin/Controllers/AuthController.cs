@@ -1,9 +1,8 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using UserManagementAdmin.Models.Entities;
-using UserManagementAdmin.Persistence;
 using UserManagementAdmin.Services;
+using UserManagementAdmin.Services.Interfaces;
 using UserManagementPoC.Shared.Extensions;
 using UserManagementPoC.Shared.Security.Contracts;
 using UserManagementPoC.Shared.Security.Models;
@@ -17,16 +16,16 @@ public class AuthController : ControllerBase
     private readonly UserManager<BshUser> _userManager;
     private readonly SignInManager<BshUser> _signInManager;
     private readonly IEncryptionService _encryptionService;
-    private readonly UserSessionService _userSessionService;
-    private readonly AdminDbContext _context;
+    private readonly IUserSessionService _userSessionService;
+    private readonly IPermissionAssignmentService _permissionAssignmentService;
 
-    public AuthController(UserManager<BshUser> userManager, SignInManager<BshUser> signInManager, IEncryptionService encryptionService, UserSessionService userSessionService, AdminDbContext context)
+    public AuthController(UserManager<BshUser> userManager, SignInManager<BshUser> signInManager, IEncryptionService encryptionService, IUserSessionService userSessionService, IPermissionAssignmentService permissionAssignmentService)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _encryptionService = encryptionService;
         _userSessionService = userSessionService;
-        _context = context;
+        _permissionAssignmentService = permissionAssignmentService;
     }
 
     [HttpPost("verify-credentials")]
@@ -98,12 +97,7 @@ public class AuthController : ControllerBase
     [HttpGet("users/{userId}/permissions")]
     public async Task<IActionResult> GetUserPermissions(string userId)
     {
-        var names = await _context.Set<UserRole>()
-            .Where(ur => ur.UserId == userId)
-            .SelectMany(ur => ur.Role.Permissions)
-            .Select(rp => rp.Permission.Workflow.Name + "." + (rp.Permission.Action != null ? rp.Permission.Action.Name : "") + "." + rp.Permission.Type.Name)
-            .Distinct()
-            .ToListAsync();
+        var names = await _permissionAssignmentService.GetUserPermissionsAsync(userId);
         return this.ApiOk(names);
     }
 

@@ -1,25 +1,21 @@
 using Microsoft.EntityFrameworkCore;
-
 using UserManagementAdmin.Models.Entities;
-
-using UserManagementAdmin.Persistence;
+using UserManagementAdmin.Services.Interfaces;
+using UserManagementPoC.Shared.Repositories;
 
 namespace UserManagementAdmin.Services;
 
-public class WorkflowAdministrationService
+public class WorkflowAdministrationService : IWorkflowAdministrationService
 {
-    private readonly AdminDbContext _context;
-    public WorkflowAdministrationService(AdminDbContext context)
+    private readonly IUnitOfWork _uow;
+    public WorkflowAdministrationService(IUnitOfWork uow)
     {
-        _context = context;
-
+        _uow = uow;
     }
     public async Task<List<WorkflowType>> GetWorkflowTypesAsync()
     {
-        return await _context.Set<WorkflowType>()
-                             .Include(w => w.Actions)
-                             .ToListAsync();
-
+        var result = await _uow.Repository<WorkflowType>().GetAllAsync(q => q.Include(w => w.Actions));
+        return result.ToList();
     }
     public async Task<WorkflowType> CreateWorkflowTypeAsync(string name, string description)
     {
@@ -28,9 +24,8 @@ public class WorkflowAdministrationService
             Name = name,
             Description = description
         };
-        _context.Set<WorkflowType>().Add(wf);
-        await _context.SaveChangesAsync();
-
+        await _uow.Repository<WorkflowType>().AddAsync(wf);
+        await _uow.SaveChangesAsync();
         return wf;
     }
     public async Task<WorkflowAction> CreateWorkflowActionAsync(string workflowId, string name, string description)
@@ -41,15 +36,14 @@ public class WorkflowAdministrationService
             Name = name,
             Description = description
         };
-        _context.Set<WorkflowAction>().Add(action);
-        await _context.SaveChangesAsync();
-
+        await _uow.Repository<WorkflowAction>().AddAsync(action);
+        await _uow.SaveChangesAsync();
         return action;
     }
     public async Task<List<PermissionType>> GetPermissionTypesAsync()
     {
-
-        return await _context.Set<PermissionType>().ToListAsync();
+        var result = await _uow.Repository<PermissionType>().GetAllAsync();
+        return result.ToList();
     }
     public async Task<PermissionType> CreatePermissionTypeAsync(string name, string description)
     {
@@ -58,18 +52,16 @@ public class WorkflowAdministrationService
             Name = name,
             Description = description
         };
-        _context.Set<PermissionType>().Add(pt);
-        await _context.SaveChangesAsync();
-
+        await _uow.Repository<PermissionType>().AddAsync(pt);
+        await _uow.SaveChangesAsync();
         return pt;
     }
     public async Task<List<Permission>> GetPermissionsAsync()
     {
-        return await _context.Set<Permission>()
-                             .Include(p => p.Workflow)
-                             .Include(p => p.Action)
-                             .Include(p => p.Type)
-                             .ToListAsync();
-
+        var result = await _uow.Repository<Permission>().GetAllAsync(
+            q => q.Include(p => p.Workflow)
+                  .Include(p => p.Action)
+                  .Include(p => p.Type));
+        return result.ToList();
     }
 }

@@ -1,7 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-
-using UserManagementAdmin.Services;
-
+using UserManagementAdmin.Services.Interfaces;
 using UserManagementPoC.Shared.Extensions;
 
 namespace UserManagementAdmin.Controllers;
@@ -10,11 +8,10 @@ namespace UserManagementAdmin.Controllers;
 [Route("api/permissions")]
 public class PermissionsController : ControllerBase
 {
-    private readonly WorkflowAdministrationService _service;
-    public PermissionsController(WorkflowAdministrationService service)
+    private readonly IWorkflowAdministrationService _service;
+    public PermissionsController(IWorkflowAdministrationService service)
     {
         _service = service;
-
     }
     [HttpGet]
     public async Task<IActionResult> GetAll()
@@ -28,7 +25,6 @@ public class PermissionsController : ControllerBase
             Action = p.Action?.Name,
             Type = p.Type?.Name
         });
-
         return this.ApiOk(result);
     }
 }

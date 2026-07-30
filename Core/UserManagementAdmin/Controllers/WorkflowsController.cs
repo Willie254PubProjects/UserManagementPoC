@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using UserManagementAdmin.Models.Requests;
-using UserManagementAdmin.Services;
+using UserManagementAdmin.Services.Interfaces;
 using UserManagementPoC.Shared.Extensions;
 
 namespace UserManagementAdmin.Controllers;
@@ -9,9 +9,9 @@ namespace UserManagementAdmin.Controllers;
 [Route("api/workflows")]
 public class WorkflowsController : ControllerBase
 {
-    private readonly WorkflowAdministrationService _service;
+    private readonly IWorkflowAdministrationService _service;
 
-    public WorkflowsController(WorkflowAdministrationService service)
+    public WorkflowsController(IWorkflowAdministrationService service)
     {
         _service = service;
     }

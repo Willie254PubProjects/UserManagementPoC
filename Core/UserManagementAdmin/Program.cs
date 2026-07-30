@@ -5,6 +5,7 @@ using UserManagementAdmin.Data;
 using UserManagementAdmin.Models.Entities;
 using UserManagementAdmin.Persistence;
 using UserManagementAdmin.Services;
+using UserManagementAdmin.Services.Interfaces;
 using UserManagementPoC.Shared.Repositories;
 using UserManagementPoC.Shared.Security;
 using UserManagementPoC.Shared.Security.Contracts;
@@ -18,11 +19,11 @@ builder.Services.AddOpenApi();
 builder.Services.AddRepositories<AdminDbContext>();
 builder.Services.AddScoped<IKeyVaultService, ConfigKeyVaultService>();
 builder.Services.AddSharedSecurity();
-builder.Services.AddScoped<UserService>();
-builder.Services.AddScoped<RoleService>();
-builder.Services.AddScoped<PermissionAssignmentService>();
-builder.Services.AddScoped<WorkflowAdministrationService>();
-builder.Services.AddScoped<UserSessionService>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IRoleService, RoleService>();
+builder.Services.AddScoped<IPermissionAssignmentService, PermissionAssignmentService>();
+builder.Services.AddScoped<IWorkflowAdministrationService, WorkflowAdministrationService>();
+builder.Services.AddScoped<IUserSessionService, UserSessionService>();
 
 var app = builder.Build();
 

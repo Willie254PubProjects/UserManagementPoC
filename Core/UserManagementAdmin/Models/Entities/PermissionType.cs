@@ -8,7 +8,7 @@ namespace UserManagementAdmin.Models.Entities
     {
         [Key]
         public string Id { get; set; } = KeyGen.GenerateKey();
-        public string Name { get; set; }
+        public string Name { get; set; } 
         public string Description { get; set; }
     }
 }

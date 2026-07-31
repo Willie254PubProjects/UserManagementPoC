@@ -10,7 +10,7 @@ using UserManagementPoC.Shared.Authorization.Client;
 
 using UserManagementPoC.Shared.Authorization.Contracts;
 
-using UserManagementPoC.WorkflowClient.Services;
+using UserManagementPoC.SampleIdentityConsumer.Services;
 
 var builder = WebApplication.CreateBuilder(args);
  builder.AddServiceDefaults();
@@ -26,7 +26,7 @@ var builder = WebApplication.CreateBuilder(args);
 };
  
 });
- builder.Services.AddWorkflowAuthorization(options => {
+ builder.Services.AddIdentityAuthorization(options => {
  options.ServiceName = "identity";
  options.Authority = "https://localhost:7057";
  

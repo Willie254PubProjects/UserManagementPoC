@@ -52,7 +52,7 @@ public class AuthController : ControllerBase
             User = new UserInfo
             {
                 Id = user.Id,
-                Username = user.UserName ?? "",
+                UserName = user.UserName ?? "",
                 Email = user.Email ?? "",
                 FirstName = user.FirstName,
                 LastName = user.LastName,
@@ -70,7 +70,7 @@ public class AuthController : ControllerBase
         return this.ApiOk(new UserInfo
         {
             Id = user.Id,
-            Username = user.UserName ?? "",
+            UserName = user.UserName ?? "",
             Email = user.Email ?? "",
             FirstName = user.FirstName,
             LastName = user.LastName,

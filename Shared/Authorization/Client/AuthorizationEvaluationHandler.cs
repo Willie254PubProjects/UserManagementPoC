@@ -1,21 +1,14 @@
 using Microsoft.AspNetCore.Authorization;
-
 using Microsoft.AspNetCore.Http;
-
 using UserManagementPoC.Shared.Abstractions;
-
 using UserManagementPoC.Shared.Authorization.Attributes;
-
 using UserManagementPoC.Shared.Authorization.Contracts;
-
 using UserManagementPoC.Shared.Authorization.Enums;
-
 using UserManagementPoC.Shared.Authorization.Models;
-
 namespace UserManagementPoC.Shared.Authorization.Client;
 
 using AuthorizationEvaluator = Contracts.IAuthorizationEvaluator;
-internal class AuthorizationEvaluationHandler : AuthorizationHandler<WorkflowAuthorizationRequirement>
+internal class AuthorizationEvaluationHandler : AuthorizationHandler<IdentityAuthorizationRequirement>
 {
     private readonly AuthorizationEvaluator _evaluator;
     private readonly IWorkflowContextResolver _workflowContextResolver;
@@ -29,7 +22,7 @@ internal class AuthorizationEvaluationHandler : AuthorizationHandler<WorkflowAut
         _httpContextAccessor = httpContextAccessor;
 
     }
-    protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, WorkflowAuthorizationRequirement requirement)
+    protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, IdentityAuthorizationRequirement requirement)
     {
         if (!_currentUser.IsAuthenticated)
         {
@@ -47,12 +40,10 @@ internal class AuthorizationEvaluationHandler : AuthorizationHandler<WorkflowAut
             if (requirement.PolicyType == AuthPolicyType.Role)
             {
                 authContext.Roles = requirement.Items;
-
             }
             else
             {
                 authContext.Permissions = requirement.Items;
-
             }
         }
         else

@@ -2,7 +2,7 @@
   <Folder Name="/Core/">
     <Project Path="Core/Identity/Identity.csproj" />
     <Project Path="Core/UserManagementAdmin/UserManagementAdmin.csproj" />
-    <Project Path="Core/WorkflowClient/WorkflowClient.csproj" />
+    <Project Path="Core/SampleIdentityConsumer/SampleIdentityConsumer.csproj" />
   </Folder>
   <Folder Name="/Shared/">
     <Project Path="Shared/Security/Security.csproj" />

@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using UserManagementPoC.Shared.Extensions;
 using UserManagementPoC.Shared.Authorization.Attributes;
 
-namespace UserManagementPoC.WorkflowClient.Controllers;
+namespace UserManagementPoC.SampleIdentityConsumer.Controllers;
 
 [ApiController]
 [Route("api/sample")]
@@ -14,7 +14,7 @@ public class SampleWorkflowController : ControllerBase
     {
         return this.ApiOk(new
         {
-            Message = "WorkflowClient is running",
+            Message = "SampleIdentityConsumer is running",
             Endpoints = new[]
             {
                 "GET /api/sample",

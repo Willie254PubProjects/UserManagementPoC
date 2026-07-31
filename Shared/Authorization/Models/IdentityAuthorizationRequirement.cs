@@ -4,7 +4,7 @@ using UserManagementPoC.Shared.Authorization.Enums;
 
 namespace UserManagementPoC.Shared.Authorization.Models;
 
-public class WorkflowAuthorizationRequirement : IAuthorizationRequirement
+public class IdentityAuthorizationRequirement : IAuthorizationRequirement
 {
     public string[] Items { get; init;} = [];
     public AuthPolicyType? PolicyType { get; init; }

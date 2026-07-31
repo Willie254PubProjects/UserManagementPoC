@@ -20,9 +20,11 @@ internal class AuthorizationClient : IAuthorizationEvaluator
     {
         try
         {
-            var apiResponse = await _flurlClient.Request("/api/authorization/evaluate").PostJsonAsync(context, cancellationToken: cancellationToken).ReceiveJson<ApiResponse<AuthorizationResult>>();
-            return apiResponse?.Data ?? AuthorizationResult.Denied("Invalid response");
+            var apiResponse = await _flurlClient.Request("/api/authorization/evaluate")
+                                                .PostJsonAsync(context, cancellationToken: cancellationToken)
+                                                .ReceiveJson<ApiResponse<AuthorizationResult>>();
 
+            return apiResponse?.Data ?? AuthorizationResult.Denied("Invalid response");
         }
         catch (FlurlHttpException)
         {

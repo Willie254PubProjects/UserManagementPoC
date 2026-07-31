@@ -19,7 +19,7 @@ public class UserService : IUserService
         var query = _userManager.Users.Select(u => new UserInfo
         {
             Id = u.Id,
-            Username = u.UserName ?? "",
+            UserName = u.UserName ?? "",
             Email = u.Email ?? "",
             FirstName = u.FirstName,
             LastName = u.LastName
@@ -42,7 +42,7 @@ public class UserService : IUserService
         return new UserInfo
         {
             Id = user.Id,
-            Username = user.UserName ?? "",
+            UserName = user.UserName ?? "",
             Email = user.Email ?? "",
             FirstName = user.FirstName,
             LastName = user.LastName,

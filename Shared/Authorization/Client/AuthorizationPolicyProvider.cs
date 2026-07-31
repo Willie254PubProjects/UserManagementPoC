@@ -13,7 +13,7 @@ namespace UserManagementPoC.Shared.Authorization.Client;
 internal class AuthorizationPolicyProvider : IAuthorizationPolicyProvider
 {
     private readonly DefaultAuthorizationPolicyProvider _fallback;
-    public AuthorizationPolicyProvider(IOptions<AuthorizationOptions> options)
+    public AuthorizationPolicyProvider(IOptions<Microsoft.AspNetCore.Authorization.AuthorizationOptions> options)
     {
         _fallback = new DefaultAuthorizationPolicyProvider(options);
 
@@ -22,7 +22,7 @@ internal class AuthorizationPolicyProvider : IAuthorizationPolicyProvider
     {
         if (policyName == AuthorizeWorkflowAttribute.PolicyPrefix)
         {
-            var policy = new AuthorizationPolicyBuilder().AddRequirements(new WorkflowAuthorizationRequirement()).Build();
+            var policy = new AuthorizationPolicyBuilder().AddRequirements(new IdentityAuthorizationRequirement()).Build();
             return Task.FromResult<AuthorizationPolicy?>(policy);
 
         }
@@ -37,7 +37,7 @@ internal class AuthorizationPolicyProvider : IAuthorizationPolicyProvider
     }
     public Task<AuthorizationPolicy> GetDefaultPolicyAsync() => _fallback.GetDefaultPolicyAsync();
     public Task<AuthorizationPolicy?> GetFallbackPolicyAsync() => _fallback.GetFallbackPolicyAsync();
-    private static bool TryParseAuthRequirementPolicy(string policyName, out WorkflowAuthorizationRequirement requirement)
+    private static bool TryParseAuthRequirementPolicy(string policyName, out IdentityAuthorizationRequirement requirement)
     {
         requirement = null!;
         var segments = policyName.Split('|', 3);
@@ -46,7 +46,7 @@ internal class AuthorizationPolicyProvider : IAuthorizationPolicyProvider
         if (!Enum.TryParse<AuthOperator>(segments[1], out var authOperator)) return false;
         var items = segments[2].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         if (items.Length == 0) return false;
-        requirement = new WorkflowAuthorizationRequirement
+        requirement = new IdentityAuthorizationRequirement
         {
             Items = items,
             PolicyType = policyType,

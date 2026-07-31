@@ -11,7 +11,7 @@ public class ClaimsFactory
         var claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, user.Id), 
-            new(ClaimTypes.Name, user.Username), 
+            new(ClaimTypes.Name, user.UserName), 
             new(ClaimTypes.Email, user.Email), new("given_name", 
             user.FirstName), new("family_name", user.LastName)
         };

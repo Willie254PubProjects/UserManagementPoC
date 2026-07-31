@@ -11,11 +11,11 @@ namespace UserManagementPoC.Shared.Authorization.Client;
 using AuthHandler = Microsoft.AspNetCore.Authorization.IAuthorizationHandler;
 using AuthPolicyProvider = Microsoft.AspNetCore.Authorization.IAuthorizationPolicyProvider;
 
-public static class WorkflowAuthorizationExtensions
+public static class AuthorizationExtensions
 {
-    public static IServiceCollection AddWorkflowAuthorization(this IServiceCollection services, Action<WorkflowAuthorizationOptions>? configureOptions = null)
+    public static IServiceCollection AddIdentityAuthorization(this IServiceCollection services, Action<AuthorizationOptions>? configureOptions = null)
     {
-        var options = new WorkflowAuthorizationOptions();
+        var options = new AuthorizationOptions();
         configureOptions?.Invoke(options);
         services.AddSingleton(options);
         services.AddTransient<BearerTokenHandler>();
@@ -31,7 +31,7 @@ public static class WorkflowAuthorizationExtensions
         services.AddScoped<ICurrentUser, CurrentUser>();
         services.AddScoped<AuthHandler, AuthorizationEvaluationHandler>();
         services.AddSingleton<AuthPolicyProvider, AuthorizationPolicyProvider>();
-        return services;
 
+        return services;
     }
 }

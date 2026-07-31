@@ -12,7 +12,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Core\Identity\Identity.csproj" />
     <ProjectReference Include="..\Core\UserManagementAdmin\UserManagementAdmin.csproj" />
-    <ProjectReference Include="..\Core\WorkflowClient\WorkflowClient.csproj" />
+    <ProjectReference Include="..\Core\SampleIdentityConsumer\SampleIdentityConsumer.csproj" />
   </ItemGroup>
 
 </Project>

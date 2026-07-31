@@ -2,8 +2,9 @@ namespace UserManagementPoC.Shared.Authorization.Models;
 
 public class WorkflowContext
 {
-    public string WorkflowName { get; set; }
-    public string Action { get; set; }
-    public string? EntityId { get; set; }
-    public string? State { get; set; }
+    public string WorkflowName { get; set; } = string.Empty;
+    public string? Action { get; set; }
+    public string ActionStep { get; set; } = string.Empty; // Create | Invoke | Approve | Submit
+    public IEnumerable<string> RequiredPermissions { get; set; } = [];
+    public IEnumerable<string> RequiredRoles { get; set; } = [];
 }

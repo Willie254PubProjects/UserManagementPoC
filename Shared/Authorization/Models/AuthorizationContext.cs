@@ -11,4 +11,6 @@ public class AuthorizationContext
     public IEnumerable<string> Permissions { get; set; } = [];
     public IEnumerable<string> Roles { get; set; } = [];
     public AuthOperator? Operator{ get; set; }
+    public string? BankId { get; set; }
+    public string? BranchId { get; set; }
 }

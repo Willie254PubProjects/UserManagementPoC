@@ -16,29 +16,47 @@ public class UserService : IUserService
     }
     public async Task<PagedResponse<UserInfo>> GetAllAsync(int page = 1, int pageSize = 20)
     {
-        var query = _userManager.Users.Select(u => new UserInfo
-        {
-            Id = u.Id,
-            UserName = u.UserName ?? "",
-            Email = u.Email ?? "",
-            FirstName = u.FirstName,
-            LastName = u.LastName
-        });
+        var query = _userManager.Users
+            .Include(u => u.Subsidiary)
+            .Select(u => new
+            {
+                u.Id,
+                u.UserName,
+                u.Email,
+                u.FirstName,
+                u.LastName,
+                u.BranchId,
+                BankId = u.Subsidiary.BankId,
+                u.Subsidiary.CountryCode
+            });
         var totalCount = await query.CountAsync();
         var items = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+        var result = items.Select(x => new UserInfo
+        {
+            Id = x.Id,
+            UserName = x.UserName ?? "",
+            Email = x.Email ?? "",
+            FirstName = x.FirstName,
+            LastName = x.LastName,
+            BankId = x.BankId.ToString(),
+            BranchId = x.BranchId,
+            CountryCode = x.CountryCode,
+            IsAuthenticated = true
+        }).ToList();
         return new PagedResponse<UserInfo>
         {
             Page = page,
             PageSize = pageSize,
             TotalCount = totalCount,
-            Items = items
+            Items = result
         };
     }
     public async Task<UserInfo?> GetByIdAsync(string id)
     {
-        var user = await _userManager.FindByIdAsync(id);
+        var user = await _userManager.Users
+            .Include(u => u.Subsidiary)
+            .FirstOrDefaultAsync(u => u.Id == id);
         if (user == null) return null;
-        var roles = await _userManager.GetRolesAsync(user);
         return new UserInfo
         {
             Id = user.Id,
@@ -46,7 +64,10 @@ public class UserService : IUserService
             Email = user.Email ?? "",
             FirstName = user.FirstName,
             LastName = user.LastName,
-            Roles = roles
+            BankId = user.Subsidiary.BankId.ToString(),
+            BranchId = user.BranchId,
+            CountryCode = user.Subsidiary.CountryCode,
+            IsAuthenticated = true
         };
     }
     public async Task<IdentityResult> CreateAsync(string username, string email, string password, string firstName, string lastName)

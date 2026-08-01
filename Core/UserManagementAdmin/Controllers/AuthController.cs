@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using UserManagementAdmin.Models.Entities;
 using UserManagementAdmin.Services;
 using UserManagementAdmin.Services.Interfaces;
@@ -35,7 +36,10 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> VerifyCredentials([FromBody] VerifyCredentialsRequest request)
     {
         var password = _encryptionService.Decrypt(request.EncryptedPassword, request.Iv);
-        var user = await _userManager.FindByNameAsync(request.Username) ?? await _userManager.FindByEmailAsync(request.Username);
+        var user = await _userManager.Users
+            .Include(u => u.Subsidiary)
+            .FirstOrDefaultAsync(u => u.NormalizedUserName == _userManager.NormalizeName(request.Username)
+                || u.NormalizedEmail == _userManager.NormalizeEmail(request.Username));
         if (user == null) return this.ApiOk(new VerifyCredentialsResponse
         {
             Success = false, ErrorMessage = "Invalid credentials"
@@ -45,7 +49,6 @@ public class AuthController : ControllerBase
         {
             Success = false, ErrorMessage = "Invalid credentials"
         });
-        var roles = await _userManager.GetRolesAsync(user);
         return this.ApiOk(new VerifyCredentialsResponse
         {
             Success = true,
@@ -56,7 +59,10 @@ public class AuthController : ControllerBase
                 Email = user.Email ?? "",
                 FirstName = user.FirstName,
                 LastName = user.LastName,
-                Roles = roles
+                BankId = user.Subsidiary.BankId.ToString(),
+                BranchId = user.BranchId,
+                CountryCode = user.Subsidiary.CountryCode,
+                IsAuthenticated = true
             }
         });
     }
@@ -64,9 +70,10 @@ public class AuthController : ControllerBase
     [HttpGet("users/{id}")]
     public async Task<IActionResult> GetUserById(string id)
     {
-        var user = await _userManager.FindByIdAsync(id);
+        var user = await _userManager.Users
+            .Include(u => u.Subsidiary)
+            .FirstOrDefaultAsync(u => u.Id == id);
         if (user == null) return this.ApiNotFound();
-        var roles = await _userManager.GetRolesAsync(user);
         return this.ApiOk(new UserInfo
         {
             Id = user.Id,
@@ -74,7 +81,10 @@ public class AuthController : ControllerBase
             Email = user.Email ?? "",
             FirstName = user.FirstName,
             LastName = user.LastName,
-            Roles = roles
+            BankId = user.Subsidiary.BankId.ToString(),
+            BranchId = user.BranchId,
+            CountryCode = user.Subsidiary.CountryCode,
+            IsAuthenticated = true
         });
     }
 

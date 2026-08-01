@@ -89,12 +89,10 @@ the Identity service or the consuming application.
 |---|---|---|---|
 | `IAuthorizationEvaluator` | Evaluate an authorization request | `AuthorizationService` (Identity) | Shared.Authorization |
 | `IWorkflowContextResolver` | Resolve workflow context from HTTP request | Client app provides | Shared.Authorization |
-| `IPermissionProvider` | Retrieve user permissions | Not yet used in pipeline | Shared.Authorization |
-| `IPermissionDefinitionProvider` | Enumerate known permission definitions | -- | Shared.Authorization |
 | `ITokenGenerator` | Generate JWT + refresh token | `TokenService` (Identity) | Shared.Security |
 | `ITokenValidator` | Validate a JWT and return user info | `TokenService` (Identity) | Shared.Security |
 | `IUserAuthenticator` | Authenticate credentials and issue tokens | `AuthenticationService` (Identity) | Shared.Security |
-| `ICurrentUser` | Access current user from HTTP context | `CurrentUser` (SDK internal) | Shared.Shared |
+| `ICurrentUser` | Access current user identity (Id, UserName, DisplayName, Email, BankId, BranchId, CountryCode) from JWT claims | `CurrentUser` (SDK internal) | Shared.Shared |
 | `ICacheService` | Generic caching abstraction | `MemoryCacheService` (Identity) | Shared.Shared |
 | `IUserManagementApiClient` | HTTP client to UserManagementAdmin | `UserManagementApiClient` (Identity) | Core.Identity |
 
@@ -177,10 +175,12 @@ public class ClaimsFactory
         var claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, user.Id),
-            new(ClaimTypes.Name, user.Username),
+            new(ClaimTypes.Name, user.UserName),
             new(ClaimTypes.Email, user.Email),
-            new("given_name", user.FirstName),
-            new("family_name", user.LastName)
+            new("display_name", user.DisplayName),
+            new("bank_id", user.BankId),
+            new("branch_id", user.BranchId),
+            new("country_code", user.CountryCode)
         };
 
         if (!string.IsNullOrEmpty(securityVersion))
@@ -198,18 +198,21 @@ The JWT is intentionally **lightweight**:
 | Claim | Source | Purpose |
 |---|---|---|
 | `sub` (NameIdentifier) | User.Id | Identify the user |
-| `name` | User.Username | Display name |
+| `name` | User.UserName | Username |
 | `email` | User.Email | Contact / lookup |
-| `given_name` | User.FirstName | Personalization |
-| `family_name` | User.LastName | Personalization |
+| `display_name` | User.DisplayName | Display name |
+| `bank_id` | User.BankId | Subsidiary bank identifier |
+| `branch_id` | User.BranchId | Branch identifier |
+| `country_code` | User.CountryCode | Country code |
 | `security_version` | Session GUID | Link token to server-side session |
 
-Explicitly excluded:
+The token maps the entire identity of `UserInfo` (which implements
+`ICurrentUser`). Explicitly excluded:
 
 -   **Roles** -- not embedded
 -   **Permissions** -- not embedded
 -   **Workflow data** -- not embedded
--   **Organizational scope** -- not embedded
+-   **given_name / family_name** -- not embedded (only `display_name`)
 
 ### 4.3 Token Abstraction
 
@@ -298,11 +301,14 @@ This means:
 │ sub          │         │                  │         │                  │
 │ name         │         │  On every eval:  │         │  Stores:         │
 │ email        │         │                  │         │  ─ Users         │
-│ security_ver │ ──────► │  1. Validate JWT │────────►│  ─ Sessions      │
-│              │         │  2. Validate ses │  HTTP   │  ─ Roles         │
-│ NO roles     │         │  3. Fetch roles  │◄────────│  ─ Permissions   │
-│ NO perms     │         │  4. Fetch perms  │         │  ─ Assignments   │
-│ NO workflow  │         │  5. Evaluate     │         │                  │
+│ display_name │         │  1. Validate JWT │────────►│  ─ Sessions      │
+│ bank_id      │ ──────► │  2. Validate ses │  HTTP   │  ─ Roles         │
+│ branch_id    │         │  3. Fetch roles  │◄────────│  ─ Permissions   │
+│ country_code │         │  4. Fetch perms  │         │  ─ Assignments   │
+│ security_ver │         │  5. Evaluate     │         │                  │
+│ NO roles     │         │                  │         │                  │
+│ NO perms     │         │                  │         │                  │
+│ NO workflow  │         │                  │         │                  │
 └──────────────┘         └────────────────┘         └──────────────────┘
 ```
 

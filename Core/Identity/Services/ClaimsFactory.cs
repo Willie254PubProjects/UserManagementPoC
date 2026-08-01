@@ -10,10 +10,13 @@ public class ClaimsFactory
     {
         var claims = new List<Claim>
         {
-            new(ClaimTypes.NameIdentifier, user.Id), 
-            new(ClaimTypes.Name, user.UserName), 
-            new(ClaimTypes.Email, user.Email), new("given_name", 
-            user.FirstName), new("family_name", user.LastName)
+            new(ClaimTypes.NameIdentifier, user.Id),
+            new(ClaimTypes.Name, user.UserName),
+            new(ClaimTypes.Email, user.Email),
+            new("display_name", user.DisplayName),
+            new("bank_id", user.BankId),
+            new("branch_id", user.BranchId),
+            new("country_code", user.CountryCode)
         };
 
         if (!string.IsNullOrEmpty(securityVersion))
@@ -21,7 +24,6 @@ public class ClaimsFactory
             claims.Add(new("security_version", securityVersion));
         }
 
-        claims.AddRange(user.Roles.Select(role => new Claim(ClaimTypes.Role, role)));
         return claims;
     }
 }

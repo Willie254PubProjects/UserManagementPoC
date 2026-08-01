@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using UserManagementPoC.Shared.Extensions;
 using UserManagementPoC.Shared.Authorization.Attributes;
@@ -18,9 +17,15 @@ public class SampleWorkflowController : ControllerBase
             Endpoints = new[]
             {
                 "GET /api/sample",
-                "GET /api/sample/{workflow}/{action}  [AuthorizeWorkflow]",
-                "GET /api/sample/permission-check    [AuthorizeAllPermissions]",
-                "GET /api/sample/admin-only           [Authorize(Roles)]"
+                "GET /api/sample/{workflow}/{action}                 [AuthorizeWorkflow]",
+                "GET /api/sample/permission-check                   [AuthorizeAllPermissions]",
+                "GET /api/sample/admin-only                          [AuthorizeAnyRole]",
+                "GET /api/sample/roles/any-of                        [AuthorizeAnyRole]",
+                "GET /api/sample/roles/all-of                        [AuthorizeAllRoles]",
+                "GET /api/sample/permissions/any-of                  [AuthorizeAnyPermission]",
+                "GET /api/sample/permissions/all-of                  [AuthorizeAllPermissions]",
+                "GET /api/sample/permissions/custom-policy           [AuthRequirement]",
+                "GET /api/sample/permissions/combined                [AuthorizeAnyRole + AuthorizeAnyPermission]"
             }
         });
     }
@@ -48,7 +53,7 @@ public class SampleWorkflowController : ControllerBase
     }
 
     [HttpGet("admin-only")]
-    [Authorize(Roles = "Administrator")]
+    [AuthorizeAnyRole("Administrator")]
     public IActionResult AdminOnly()
     {
         return this.ApiOk(new

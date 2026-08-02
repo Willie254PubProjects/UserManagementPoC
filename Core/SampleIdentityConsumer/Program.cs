@@ -32,6 +32,7 @@ var builder = WebApplication.CreateBuilder(args);
  
 });
  builder.Services.AddScoped<IWorkflowContextResolver, SampleWorkflowContextResolver>();
+ builder.Services.AddScoped<IResourceScopeResolver, SampleResourceScopeResolver>();
  builder.Services.AddControllers();
  builder.Services.AddOpenApi();
  var app = builder.Build();

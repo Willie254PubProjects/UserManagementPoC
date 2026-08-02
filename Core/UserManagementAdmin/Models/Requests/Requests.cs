@@ -11,6 +11,8 @@ public class CreateUserRequest
 public class RoleRequest
 {
     public string RoleName { get; set; }
+    public string ScopeOrganizationUnitId { get; set; }
+    public bool CascadeOrgStructure { get; set; }
 }
 public class CreateRoleRequest
 {
@@ -20,17 +22,12 @@ public class AssignPermissionRequest
 {
     public string PermissionId { get; set; }
 }
-public class CreateWorkflowRequest
-{
-    public string Name { get; set; }
-    public string Description { get; set; }
-}
-public class CreateWorkflowActionRequest
-{
-    public string Name { get; set; }
-    public string Description { get; set; }
-}
 public class CreatePermissionTypeRequest
+{
+    public string Name { get; set; }
+    public string Description { get; set; }
+}
+public class CreateSubPermissionRequest
 {
     public string Name { get; set; }
     public string Description { get; set; }

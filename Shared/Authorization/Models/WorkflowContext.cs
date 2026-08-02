@@ -7,4 +7,6 @@ public class WorkflowContext
     public string ActionStep { get; set; } = string.Empty; // Create | Invoke | Approve | Submit
     public IEnumerable<string> RequiredPermissions { get; set; } = [];
     public IEnumerable<string> RequiredRoles { get; set; } = [];
+    public string? BankId { get; set; }
+    public string? BranchId { get; set; }
 }

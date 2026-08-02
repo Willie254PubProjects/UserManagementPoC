@@ -89,6 +89,7 @@ the Identity service or the consuming application.
 |---|---|---|---|
 | `IAuthorizationEvaluator` | Evaluate an authorization request | `AuthorizationService` (Identity) | Shared.Authorization |
 | `IWorkflowContextResolver` | Resolve workflow context from HTTP request | Client app provides | Shared.Authorization |
+| `IResourceScopeResolver` | Resolve the target resource's scope (`BankId`/`BranchId`) for a request | `NoOpResourceScopeResolver` (SDK default) | Shared.Authorization |
 | `ITokenGenerator` | Generate JWT + refresh token | `TokenService` (Identity) | Shared.Security |
 | `ITokenValidator` | Validate a JWT and return user info | `TokenService` (Identity) | Shared.Security |
 | `IUserAuthenticator` | Authenticate credentials and issue tokens | `AuthenticationService` (Identity) | Shared.Security |
@@ -111,6 +112,9 @@ services.AddScoped<IAuthorizationEvaluator>(_ =>
 
 // A client app provides its own workflow resolver
 services.AddScoped<IWorkflowContextResolver, CustomWorkflowContextResolver>();
+
+// A client app provides its own resource scope resolver
+services.AddScoped<IResourceScopeResolver, CustomResourceScopeResolver>();
 ```
 
 The SDK registration method `AddIdentityAuthorization()` registers only
@@ -392,13 +396,13 @@ public class AuthRequirementAttribute : AuthorizeAttribute
 |---|---|---|---|
 | `[AuthorizeAnyRole("Admin", "Manager")]` | Role | Or | `Role|Or|Admin,Manager` |
 | `[AuthorizeAllRoles("Admin", "Manager")]` | Role | And | `Role|And|Admin,Manager` |
-| `[AuthorizeAnyPermission("Loan.Create.Invoke")]` | Permission | Or | `Permission|Or|Loan.Create.Invoke` |
+| `[AuthorizeAnyPermission("CardPrinting.Create")]` | Permission | Or | `Permission|Or|CardPrinting.Create` |
 | `[AuthorizeAllPermissions("A", "B")]` | Permission | And | `Permission|And|A,B` |
 
 ``` csharp
 // User must hold at least one of these permissions
-[AuthorizeAnyPermission("Loan.Create.Invoke", "Loan.Approve.*")]
-public IActionResult CreateLoan() { ... }
+[AuthorizeAnyPermission("CardPrinting.Create", "CardPrinting.Approve")]
+public IActionResult CreateCardPrinting() { ... }
 
 // User must hold all specified roles
 [AuthorizeAllRoles("Administrator")]
@@ -415,15 +419,15 @@ The `AuthPolicyName` helper converts structured data into a flat string
 that survives ASP.NET Core's policy-name-based architecture:
 
 ``` csharp
-// AuthPolicyName.Create(AuthPolicyType.Permission, AuthOperator.Or, ["Loan.Create.Invoke"])
-// → "Permission|Or|Loan.Create.Invoke"
+// AuthPolicyName.Create(AuthPolicyType.Permission, AuthOperator.Or, ["CardPrinting.Create"])
+// → "Permission|Or|CardPrinting.Create"
 ```
 
 The `AuthorizationPolicyProvider` reverses this:
 
 ``` csharp
-// "Permission|Or|Loan.Create.Invoke"
-// → IdentityAuthorizationRequirement { PolicyType = Permission, Operator = Or, Items = ["Loan.Create.Invoke"] }
+// "Permission|Or|CardPrinting.Create"
+// → IdentityAuthorizationRequirement { PolicyType = Permission, Operator = Or, Items = ["CardPrinting.Create"] }
 ```
 
 ------------------------------------------------------------------------
@@ -449,7 +453,9 @@ The `AuthorizationPolicyProvider` reverses this:
 │     (if no PolicyType on requirement)                            │
 │     OR                                                           │
 │   ─ Populates roles/permissions from requirement (if PolicyType) │
-│   ─ Builds AuthorizationContext                                  │
+│   ─ Resolves resource scope via IResourceScopeResolver           │
+│     (falls back to Workflow?.BankId/BranchId, then current user) │
+│   ─ Builds AuthorizationContext + BankId/BranchId                │
 │       │                                                          │
 │       ▼                                                          │
 │  AuthorizationClient (IAuthorizationEvaluator)                   │
@@ -518,6 +524,17 @@ protected override async Task HandleRequirementAsync(
         authContext.Workflow = await _workflowContextResolver.ResolveAsync(httpContext);
     }
 
+    // Resource scope resolution (always runs)
+    var resourceScope = await _resourceScopeResolver.ResolveAsync(
+        _httpContextAccessor.HttpContext);
+    // Precedence: explicit Workflow → resolved resource scope → current user claims
+    authContext.BankId   = authContext.Workflow?.BankId
+                            ?? resourceScope?.BankId
+                            ?? _currentUser.BankId;
+    authContext.BranchId = authContext.Workflow?.BranchId
+                            ?? resourceScope?.BranchId
+                            ?? _currentUser.BranchId;
+
     var result = await _evaluator.EvaluateAsync(authContext);
     if (result.IsAllowed) context.Succeed(requirement);
     else context.Fail();
@@ -532,6 +549,13 @@ protected override async Task HandleRequirementAsync(
 `[AuthorizeWorkflow]`). The handler calls `IWorkflowContextResolver`
 to produce a `WorkflowContext` containing the permission set. The
 client application owns this resolver.
+
+**Resource scope (always runs):** Independently of the branch, the
+handler calls `IResourceScopeResolver` to determine the target
+resource's scope. The effective `BankId`/`BranchId` are resolved with
+the precedence `Workflow` → `ResourceScope` → current-user claims.
+Before evaluating, these are attached to the `AuthorizationContext` so
+the authorization engine can enforce organizational scope.
 
 ### 7.3 Server-Side Evaluation
 
@@ -562,10 +586,55 @@ Permissions and roles are compared case-insensitively. For
 workflow-sourced permissions, OR semantics apply -- holding any one of
 the required permissions grants access.
 
-`AuthorizationContext` also carries optional `BankId` and `BranchId`
-fields. They are reserved as placeholders for future organizational-scope
-evaluation (restricting access to a specific subsidiary or branch) and
-are not yet consumed by the engine.
+`AuthorizationContext` also carries `BankId` and `BranchId`. These are
+consumed by the authorization engine to enforce organizational scope:
+the requesting user's assigned roles/permissions must align with the
+resolved scope (a specific subsidiary/branch) for the call to be
+allowed. They are resolved by `IResourceScopeResolver`.
+
+### 7.4 Resource Scope Enforcement and Flexibility
+
+The `IResourceScopeResolver` is the extension point that decides what
+scope a request applies to. The SDK ships a `NoOpResourceScopeResolver`
+that returns `null`, which makes the engine fall back to the current
+user's own `BankId`/`BranchId` claims (effectively "self-scoped"). The
+client application replaces it to tailor scope resolution to its
+environment:
+
+``` csharp
+public interface IResourceScopeResolver
+{
+    Task<ResourceScope?> ResolveAsync(HttpContext httpContext, CancellationToken cancellationToken = default);
+}
+```
+
+Because it receives the full `HttpContext`, a resolver can derive scope
+from virtually any request signal, making it extremely flexible:
+
+-   **Database / repository lookup** -- resolve the `BankId`/`BranchId`
+    from a record identified by a route parameter (e.g. the account or
+    client being acted upon). This is the most common and robust source,
+    since the scope is derived from the actual resource.
+-   **Query-string parameters** -- read `?bank=&branch=` for ad-hoc,
+    framed scope selection (as demonstrated in the sample consumer).
+-   **HTTP headers** -- a gateway or upstream service can stamp headers
+    (e.g. `X-Tenant`, `X-Branch`) that the resolver trusts.
+-   **Route values / path** -- parse a segment such as
+    `/api/accounts/{branchId}/...`.
+-   **Claims** -- fall back to `ClaimTypes` from the authenticated
+    identity when nothing more specific is present.
+-   **Composition** -- apply any of the above in a chosen precedence,
+    returning `null` to delegate to the next fallback in the handler's
+    chain (`Workflow` → resolved scope → current-user claims).
+
+The return value is optional on purpose: returning `null` signals "no
+specific scope," letting the pipeline fall back deterministically. No
+resolver implementation ever needs to know about the others.
+
+A built-in reference resolver is provided for the PoC
+(`SampleResourceScopeResolver` in the consumer) that reads
+`bank`/`branch` query-string values, demonstrating the query-string
+strategy end to end.
 
 ------------------------------------------------------------------------
 
@@ -613,8 +682,8 @@ permissions:{userId}:{securityVersion}
 Example:
 
 ```
-roles:usr_abc123:3f8a2b1c-...    → IReadOnlySet<string> { "Administrator" }
-permissions:usr_abc123:3f8a2b1c-... → IReadOnlySet<string> { "Loan.Create.Invoke", "Loan.View.*" }
+roles:usr_abc123:3f8a2b1c-...    → RoleDto[] { { Name = "Administrator", Id = "r1", Scopes = [...] } }
+permissions:usr_abc123:3f8a2b1c-... → PermissionDto[] { { Name = "CardPrinting.Create", Id = "p1", ... } }
 ```
 
 ### 8.3 Cache Duration
@@ -725,27 +794,54 @@ Register it:
 builder.Services.AddScoped<IWorkflowContextResolver, MyResolver>();
 ```
 
+### Step 3b: Implement IResourceScopeResolver (optional)
+
+For organizational-scope enforcement, provide a resolver so the engine
+knows which bank/branch the request targets. If omitted, the SDK's
+`NoOpResourceScopeResolver` returns `null` and the engine falls back to
+the current user's own scope. A query-string example:
+
+``` csharp
+public class MyScopeResolver : IResourceScopeResolver
+{
+    public Task<ResourceScope?> ResolveAsync(
+        HttpContext httpContext, CancellationToken ct = default)
+    {
+        var bank   = httpContext.Request.Query["bank"].FirstOrDefault();
+        var branch = httpContext.Request.Query["branch"].FirstOrDefault();
+        if (string.IsNullOrEmpty(bank)) return Task.FromResult<ResourceScope?>(null);
+        return Task.FromResult<ResourceScope?>(new ResourceScope(bank, branch));
+    }
+}
+```
+
+Register it:
+
+``` csharp
+builder.Services.AddScoped<IResourceScopeResolver, MyScopeResolver>();
+```
+
 ### Step 4: Decorate Endpoints
 
 ``` csharp
 [ApiController]
-[Route("api/loans")]
-public class LoanController : ControllerBase
+[Route("api/card-printing")]
+public class CardPrintingController : ControllerBase
 {
     [HttpPost]
     [AuthorizeWorkflow]
-    public async Task<IActionResult> CreateLoan(...)
+    public async Task<IActionResult> CreateCardPrinting(...)
     { /* business logic only */ }
 
     [HttpGet("{id}")]
-    [AuthorizeAnyPermission("Loan.View.*")]
-    public async Task<IActionResult> GetLoan(string id)
+    [AuthorizeAnyPermission("CardPrinting.View")]
+    public async Task<IActionResult> GetCardPrinting(string id)
     { /* business logic only */ }
 
     [HttpPost("{id}/approve")]
-    [AuthorizeAllRoles("Loan Supervisor")]
+    [AuthorizeAllRoles("CardPrinting Supervisor")]
     [AuthorizeWorkflow]
-    public async Task<IActionResult> ApproveLoan(string id)
+    public async Task<IActionResult> ApproveCardPrinting(string id)
     { /* business logic only */ }
 }
 ```
@@ -813,11 +909,17 @@ Client                     Identity                   UserManagementAdmin
   │ IWorkflowContextResolver │                              │
   │ → WorkflowContext        │                              │
   │   { RequiredPerms:       │                              │
-  │     ["Loan.Create.Invoke"] }                            │
+  │     ["CardPrinting.Create"] }                            │
+  │                          │                              │
+  │ Handler calls            │                              │
+  │ IResourceScopeResolver   │                              │
+  │ → scope from ?bank=      │                              │
+  │   &branch= querystring   │                              │
   │                          │                              │
   │ POST /api/authorization  │                              │
   │   /evaluate              │                              │
-  │ { UserId, Workflow }     │                              │
+  │ { UserId, Workflow,      │                              │
+  │   BankId, BranchId }     │                              │
   │ + Bearer token           │                              │
   │─────────────────────────►│                              │
   │                          │ Read security_version        │
@@ -832,12 +934,12 @@ Client                     Identity                   UserManagementAdmin
   │                          │ GET /api/auth/users/{id}/    │
   │                          │   permissions                │
   │                          │─────────────────────────────►│
-  │                          │   IReadOnlySet<string>       │
+  │                          │   ApiResponse<PermissionDto[]>│
   │                          │◄─────────────────────────────│
   │                          │ Store in cache (3 min)       │
   │                          │                              │
   │                          │ Evaluate:                    │
-  │                          │ "Loan.Create.Invoke" in      │
+  │                          │ "CardPrinting.Create" in      │
   │                          │ granted permissions? → YES   │
   │                          │                              │
   │  { IsAllowed: true }     │                              │
@@ -852,20 +954,20 @@ Client                     Identity                   UserManagementAdmin
   │ GET /api/sample/         │                              │
   │   permission-check       │                              │
   │ [AuthorizeAllPermissions │                              │
-  │   ("Loan.Create.Invoke")]│                              │
+  │   ("CardPrinting.Create")]│                              │
   │                          │                              │
   │ PolicyProvider parses    │                              │
   │ "Permission|And|         │                              │
-  │  Loan.Create.Invoke"     │                              │
+  │  CardPrinting.Create"    │                              │
   │ → WorkflowAuthReq        │                              │
   │   { PolicyType=Permission│                              │
   │     Operator=And         │                              │
-  │     Items=["Loan.Create.Invoke"] }                      │
+  │     Items=["CardPrinting.Create"] }                      │
   │                          │                              │
   │ Handler builds:          │                              │
   │ AuthorizationContext     │                              │
   │ { UserId, Permissions:   │                              │
-  │   ["Loan.Create.Invoke"] │                              │
+  │   ["CardPrinting.Create"] │                              │
   │   Operator=And }         │                              │
   │                          │                              │
   │ POST /api/authorization  │                              │
@@ -978,7 +1080,10 @@ freshly fetched and cached under the new key.
 │                                                              │
 │   3. Implement: IWorkflowContextResolver                     │
 │                                                              │
-│   4. Decorate: [AuthorizeWorkflow]                           │
+│   4. Implement: IResourceScopeResolver                       │
+│      (optional; NoOp falls back to current-user scope)       │
+│                                                              │
+│   5. Decorate: [AuthorizeWorkflow]                           │
 │                                                              │
 │   ─────────────────────────────────────────────              │
 │                                                              │

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
-using UserManagementPoC.Shared.Extensions;
 using UserManagementPoC.Shared.Authorization.Attributes;
+using UserManagementPoC.Shared.Authorization.Constants;
+using UserManagementPoC.Shared.Extensions;
 
 namespace UserManagementPoC.SampleIdentityConsumer.Controllers;
 
@@ -17,7 +18,7 @@ public class SampleWorkflowController : ControllerBase
             Endpoints = new[]
             {
                 "GET /api/sample",
-                "GET /api/sample/{workflow}/{action}                 [AuthorizeWorkflow]",
+                "GET /api/sample/{workflow}/{action}                 [AuthorizeWorkflow] (scope via ?bank=&branch=)",
                 "GET /api/sample/permission-check                   [AuthorizeAllPermissions]",
                 "GET /api/sample/admin-only                          [AuthorizeAnyRole]",
                 "GET /api/sample/roles/any-of                        [AuthorizeAnyRole]",
@@ -42,12 +43,12 @@ public class SampleWorkflowController : ControllerBase
     }
 
     [HttpGet("permission-check")]
-    [AuthorizeAllPermissions("Loan.Create.Invoke")]
+    [AuthorizeAllPermissions(Permissions.CardPrinting.Create)]
     public IActionResult PermissionCheck()
     {
         return this.ApiOk(new
         {
-            Message = "User has the 'Loan.Create.Invoke' permission",
+            Message = "User has the 'CardPrinting.Create' permission",
             User = User.Identity?.Name
         });
     }

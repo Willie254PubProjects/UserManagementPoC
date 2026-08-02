@@ -29,6 +29,7 @@ public static class AuthorizationExtensions
         }).AddHttpMessageHandler<BearerTokenHandler>();
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentUser, CurrentUser>();
+        services.AddScoped<IResourceScopeResolver, NoOpResourceScopeResolver>();
         services.AddScoped<AuthHandler, AuthorizationEvaluationHandler>();
         services.AddSingleton<AuthPolicyProvider, AuthorizationPolicyProvider>();
 

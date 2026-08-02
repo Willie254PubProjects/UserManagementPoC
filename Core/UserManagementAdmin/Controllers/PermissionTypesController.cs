@@ -11,8 +11,8 @@ namespace UserManagementAdmin.Controllers;
 [Route("api/permission-types")]
 public class PermissionTypesController : ControllerBase
 {
-    private readonly IWorkflowAdministrationService _service;
-    public PermissionTypesController(IWorkflowAdministrationService service)
+    private readonly IPermissionAdministrationService _service;
+    public PermissionTypesController(IPermissionAdministrationService service)
     {
         _service = service;
     }

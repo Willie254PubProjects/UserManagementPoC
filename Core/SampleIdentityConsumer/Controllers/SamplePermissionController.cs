@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using UserManagementPoC.Shared.Authorization.Attributes;
+using UserManagementPoC.Shared.Authorization.Constants;
 using UserManagementPoC.Shared.Authorization.Enums;
 using UserManagementPoC.Shared.Extensions;
 
@@ -10,29 +11,29 @@ namespace UserManagementPoC.SampleIdentityConsumer.Controllers;
 public class SamplePermissionController : ControllerBase
 {
     [HttpGet("any-of")]
-    [AuthorizeAnyPermission("Loan.Create.Invoke", "AccountOpening.Approve.Approve")]
+    [AuthorizeAnyPermission(Permissions.CardPrinting.Create, Permissions.Account.Approve)]
     public IActionResult AnyOf()
     {
         return this.ApiOk(new
         {
-            Message = "User has at least one of the permissions: Loan.Create.Invoke, AccountOpening.Approve.Approve",
+            Message = "User has at least one of the permissions: CardPrinting.Create, Account.Approve",
             User = User.Identity?.Name
         });
     }
 
     [HttpGet("all-of")]
-    [AuthorizeAllPermissions("Loan.Create.Invoke", "Loan.View.Create")]
+    [AuthorizeAllPermissions(Permissions.CardPrinting.Create, Permissions.CardRequest.View)]
     public IActionResult AllOf()
     {
         return this.ApiOk(new
         {
-            Message = "User has all of the permissions: Loan.Create.Invoke, Loan.View.Create",
+            Message = "User has all of the permissions: CardPrinting.Create, CardRequest.View",
             User = User.Identity?.Name
         });
     }
 
     [HttpGet("custom-policy")]
-    [AuthRequirement(AuthPolicyType.Permission, AuthOperator.Or, "Loan.Create.Invoke")]
+    [AuthRequirement(AuthPolicyType.Permission, AuthOperator.Or, Permissions.CardPrinting.Create)]
     public IActionResult CustomPolicy()
     {
         return this.ApiOk(new
@@ -44,7 +45,7 @@ public class SamplePermissionController : ControllerBase
 
     [HttpGet("combined")]
     [AuthorizeAnyRole("Administrator")]
-    [AuthorizeAnyPermission("Loan.Create.Invoke")]
+    [AuthorizeAnyPermission(Permissions.CardPrinting.Create)]
     public IActionResult Combined()
     {
         return this.ApiOk(new

@@ -38,7 +38,8 @@ builder.Services.AddSharedSecurity();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IPermissionAssignmentService, PermissionAssignmentService>();
-builder.Services.AddScoped<IWorkflowAdministrationService, WorkflowAdministrationService>();
+builder.Services.AddScoped<IPermissionAdministrationService, PermissionAdministrationService>();
+builder.Services.AddScoped<IOrganizationUnitService, OrganizationUnitService>();
 builder.Services.AddScoped<IUserSessionService, UserSessionService>();
 
 var app = builder.Build();

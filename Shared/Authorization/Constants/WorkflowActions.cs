@@ -6,8 +6,7 @@ public static class WorkflowActions
     public const string View = "View";
     public const string Edit = "Edit";
     public const string Approve = "Approve";
-    public const string Reject = "Reject";
+    public const string Submit = "Submit";
     public const string Invoke = "Invoke";
-    public const string Delete = "Delete";
 
 }

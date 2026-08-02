@@ -12,10 +12,9 @@ namespace UserManagementAdmin.Persistence.Configurations
         {
             builder.ToTable("Permissions");
             builder.HasKey(p => p.Id);
-            builder.HasOne(p => p.Workflow).WithMany().HasForeignKey(p => p.WorkflowId);
-            builder.HasOne(p => p.Action).WithMany().HasForeignKey(p => p.ActionId);
-            builder.HasOne(p => p.Type).WithMany().HasForeignKey(p => p.TypeId);
-            builder.Ignore(p => p.Name);
+            builder.HasOne(p => p.SubPermission).WithMany().HasForeignKey(p => p.SubPermissionId);
+            builder.HasOne(p => p.Type).WithMany().HasForeignKey(p => p.PermissionTypeId);
+            builder.Ignore(p => p.Code);
         }
     }
 }

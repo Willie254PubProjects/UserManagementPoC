@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace UserManagementAdmin.Migrations
+namespace UserManagementAdmin.Persistence.Migrations
 {
     /// <inheritdoc />
     public partial class InitialCreate : Migration
@@ -11,6 +11,25 @@ namespace UserManagementAdmin.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.CreateTable(
+                name: "AccessGroups",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "TEXT", nullable: false),
+                    Name = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
+                    Description = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    CreatedBy = table.Column<string>(type: "TEXT", nullable: false),
+                    LastUpdatedBy = table.Column<string>(type: "TEXT", nullable: false),
+                    StartDate = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    EndDate = table.Column<DateTime>(type: "TEXT", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AccessGroups", x => x.Id);
+                });
+
             migrationBuilder.CreateTable(
                 name: "AspNetRoles",
                 columns: table => new
@@ -32,11 +51,30 @@ namespace UserManagementAdmin.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "OrganizationUnitTypes",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "TEXT", nullable: false),
+                    Name = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
+                    Description = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    CreatedBy = table.Column<string>(type: "TEXT", nullable: false),
+                    LastUpdatedBy = table.Column<string>(type: "TEXT", nullable: false),
+                    StartDate = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    EndDate = table.Column<DateTime>(type: "TEXT", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_OrganizationUnitTypes", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "PermissionTypes",
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "TEXT", nullable: false),
-                    Name = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
+                    Name = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
                     Description = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
@@ -51,13 +89,12 @@ namespace UserManagementAdmin.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Subsidiaries",
+                name: "SubPermissions",
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "TEXT", nullable: false),
-                    BankId = table.Column<int>(type: "INTEGER", nullable: false),
+                    Name = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
                     Description = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false),
-                    CountryCode = table.Column<string>(type: "TEXT", maxLength: 10, nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
                     CreatedBy = table.Column<string>(type: "TEXT", nullable: false),
@@ -67,26 +104,31 @@ namespace UserManagementAdmin.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Subsidiaries", x => x.Id);
+                    table.PrimaryKey("PK_SubPermissions", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
-                name: "WorkflowTypes",
+                name: "AccessGroupRoles",
                 columns: table => new
                 {
-                    WorkflowId = table.Column<string>(type: "TEXT", nullable: false),
-                    Name = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
-                    Description = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    CreatedBy = table.Column<string>(type: "TEXT", nullable: false),
-                    LastUpdatedBy = table.Column<string>(type: "TEXT", nullable: false),
-                    StartDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    EndDate = table.Column<DateTime>(type: "TEXT", nullable: true)
+                    AccessGroupId = table.Column<string>(type: "TEXT", nullable: false),
+                    RoleId = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_WorkflowTypes", x => x.WorkflowId);
+                    table.PrimaryKey("PK_AccessGroupRoles", x => new { x.AccessGroupId, x.RoleId });
+                    table.ForeignKey(
+                        name: "FK_AccessGroupRoles_AccessGroups_AccessGroupId",
+                        column: x => x.AccessGroupId,
+                        principalTable: "AccessGroups",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_AccessGroupRoles_AspNetRoles_RoleId",
+                        column: x => x.RoleId,
+                        principalTable: "AspNetRoles",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -111,34 +153,14 @@ namespace UserManagementAdmin.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Branches",
+                name: "OrganizationUnits",
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "TEXT", nullable: false),
                     Name = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
                     Description = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false),
-                    BranchCode = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
-                    SubsidiaryId = table.Column<string>(type: "TEXT", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Branches", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Branches_Subsidiaries_SubsidiaryId",
-                        column: x => x.SubsidiaryId,
-                        principalTable: "Subsidiaries",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "WorkflowActions",
-                columns: table => new
-                {
-                    ActionId = table.Column<string>(type: "TEXT", nullable: false),
-                    Name = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
-                    Description = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false),
-                    WorkflowId = table.Column<string>(type: "TEXT", nullable: false),
+                    TypeId = table.Column<string>(type: "TEXT", nullable: false),
+                    ParentId = table.Column<string>(type: "TEXT", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
                     CreatedBy = table.Column<string>(type: "TEXT", nullable: false),
@@ -148,12 +170,50 @@ namespace UserManagementAdmin.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_WorkflowActions", x => x.ActionId);
+                    table.PrimaryKey("PK_OrganizationUnits", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_WorkflowActions_WorkflowTypes_WorkflowId",
-                        column: x => x.WorkflowId,
-                        principalTable: "WorkflowTypes",
-                        principalColumn: "WorkflowId",
+                        name: "FK_OrganizationUnits_OrganizationUnitTypes_TypeId",
+                        column: x => x.TypeId,
+                        principalTable: "OrganizationUnitTypes",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_OrganizationUnits_OrganizationUnits_ParentId",
+                        column: x => x.ParentId,
+                        principalTable: "OrganizationUnits",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Permissions",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "TEXT", nullable: false),
+                    SubPermissionId = table.Column<string>(type: "TEXT", nullable: false),
+                    PermissionTypeId = table.Column<string>(type: "TEXT", nullable: false),
+                    Description = table.Column<string>(type: "TEXT", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    CreatedBy = table.Column<string>(type: "TEXT", nullable: false),
+                    LastUpdatedBy = table.Column<string>(type: "TEXT", nullable: false),
+                    StartDate = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    EndDate = table.Column<DateTime>(type: "TEXT", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Permissions", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Permissions_PermissionTypes_PermissionTypeId",
+                        column: x => x.PermissionTypeId,
+                        principalTable: "PermissionTypes",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Permissions_SubPermissions_SubPermissionId",
+                        column: x => x.SubPermissionId,
+                        principalTable: "SubPermissions",
+                        principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
@@ -170,8 +230,7 @@ namespace UserManagementAdmin.Migrations
                     LastUpdatedBy = table.Column<string>(type: "TEXT", nullable: false),
                     StartDate = table.Column<DateTime>(type: "TEXT", nullable: false),
                     EndDate = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    SubsidiaryId = table.Column<string>(type: "TEXT", nullable: false),
-                    BranchId = table.Column<string>(type: "TEXT", nullable: false),
+                    DomicileUnitId = table.Column<string>(type: "TEXT", nullable: false),
                     UserName = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
@@ -191,53 +250,62 @@ namespace UserManagementAdmin.Migrations
                 {
                     table.PrimaryKey("PK_AspNetUsers", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_AspNetUsers_Branches_BranchId",
-                        column: x => x.BranchId,
-                        principalTable: "Branches",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_AspNetUsers_Subsidiaries_SubsidiaryId",
-                        column: x => x.SubsidiaryId,
-                        principalTable: "Subsidiaries",
+                        name: "FK_AspNetUsers_OrganizationUnits_DomicileUnitId",
+                        column: x => x.DomicileUnitId,
+                        principalTable: "OrganizationUnits",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
-                name: "Permissions",
+                name: "AccessGroupPermissions",
                 columns: table => new
                 {
-                    Id = table.Column<string>(type: "TEXT", nullable: false),
-                    WorkflowId = table.Column<string>(type: "TEXT", nullable: false),
-                    ActionId = table.Column<string>(type: "TEXT", nullable: true),
-                    TypeId = table.Column<string>(type: "TEXT", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    CreatedBy = table.Column<string>(type: "TEXT", nullable: false),
-                    LastUpdatedBy = table.Column<string>(type: "TEXT", nullable: false),
-                    StartDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    EndDate = table.Column<DateTime>(type: "TEXT", nullable: true)
+                    AccessGroupId = table.Column<string>(type: "TEXT", nullable: false),
+                    PermissionId = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Permissions", x => x.Id);
+                    table.PrimaryKey("PK_AccessGroupPermissions", x => new { x.AccessGroupId, x.PermissionId });
                     table.ForeignKey(
-                        name: "FK_Permissions_PermissionTypes_TypeId",
-                        column: x => x.TypeId,
-                        principalTable: "PermissionTypes",
+                        name: "FK_AccessGroupPermissions_AccessGroups_AccessGroupId",
+                        column: x => x.AccessGroupId,
+                        principalTable: "AccessGroups",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_Permissions_WorkflowActions_ActionId",
-                        column: x => x.ActionId,
-                        principalTable: "WorkflowActions",
-                        principalColumn: "ActionId");
+                        name: "FK_AccessGroupPermissions_Permissions_PermissionId",
+                        column: x => x.PermissionId,
+                        principalTable: "Permissions",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "RolePermissions",
+                columns: table => new
+                {
+                    RoleId = table.Column<string>(type: "TEXT", nullable: false),
+                    PermissionId = table.Column<string>(type: "TEXT", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    CreatedBy = table.Column<string>(type: "TEXT", nullable: false),
+                    LastUpdatedBy = table.Column<string>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RolePermissions", x => new { x.RoleId, x.PermissionId });
                     table.ForeignKey(
-                        name: "FK_Permissions_WorkflowTypes_WorkflowId",
-                        column: x => x.WorkflowId,
-                        principalTable: "WorkflowTypes",
-                        principalColumn: "WorkflowId",
+                        name: "FK_RolePermissions_AspNetRoles_RoleId",
+                        column: x => x.RoleId,
+                        principalTable: "AspNetRoles",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_RolePermissions_Permissions_PermissionId",
+                        column: x => x.PermissionId,
+                        principalTable: "Permissions",
+                        principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
@@ -327,20 +395,99 @@ namespace UserManagementAdmin.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "UserRoles",
+                name: "UserAccessGroups",
                 columns: table => new
                 {
-                    Id = table.Column<string>(type: "TEXT", nullable: false),
-                    RoleId = table.Column<string>(type: "TEXT", nullable: false),
+                    AccessGroupId = table.Column<string>(type: "TEXT", nullable: false),
                     UserId = table.Column<string>(type: "TEXT", nullable: false),
+                    ScopeOrganizationUnitId = table.Column<string>(type: "TEXT", nullable: false),
+                    CascadeOrgStructure = table.Column<bool>(type: "INTEGER", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
                     CreatedBy = table.Column<string>(type: "TEXT", nullable: false),
-                    LastUpdatedBy = table.Column<string>(type: "TEXT", nullable: false)
+                    LastUpdatedBy = table.Column<string>(type: "TEXT", nullable: false),
+                    StartDate = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    EndDate = table.Column<DateTime>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_UserRoles", x => x.Id);
+                    table.PrimaryKey("PK_UserAccessGroups", x => new { x.AccessGroupId, x.UserId });
+                    table.ForeignKey(
+                        name: "FK_UserAccessGroups_AccessGroups_AccessGroupId",
+                        column: x => x.AccessGroupId,
+                        principalTable: "AccessGroups",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_UserAccessGroups_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_UserAccessGroups_OrganizationUnits_ScopeOrganizationUnitId",
+                        column: x => x.ScopeOrganizationUnitId,
+                        principalTable: "OrganizationUnits",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "UserPermissions",
+                columns: table => new
+                {
+                    PermissionId = table.Column<string>(type: "TEXT", nullable: false),
+                    UserId = table.Column<string>(type: "TEXT", nullable: false),
+                    ScopeOrganizationUnitId = table.Column<string>(type: "TEXT", nullable: false),
+                    CascadeOrgStructure = table.Column<bool>(type: "INTEGER", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    CreatedBy = table.Column<string>(type: "TEXT", nullable: false),
+                    LastUpdatedBy = table.Column<string>(type: "TEXT", nullable: false),
+                    StartDate = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    EndDate = table.Column<DateTime>(type: "TEXT", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_UserPermissions", x => new { x.PermissionId, x.UserId });
+                    table.ForeignKey(
+                        name: "FK_UserPermissions_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_UserPermissions_OrganizationUnits_ScopeOrganizationUnitId",
+                        column: x => x.ScopeOrganizationUnitId,
+                        principalTable: "OrganizationUnits",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_UserPermissions_Permissions_PermissionId",
+                        column: x => x.PermissionId,
+                        principalTable: "Permissions",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "UserRoles",
+                columns: table => new
+                {
+                    RoleId = table.Column<string>(type: "TEXT", nullable: false),
+                    UserId = table.Column<string>(type: "TEXT", nullable: false),
+                    ScopeOrganizationUnitId = table.Column<string>(type: "TEXT", nullable: false),
+                    CascadeOrgStructure = table.Column<bool>(type: "INTEGER", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    CreatedBy = table.Column<string>(type: "TEXT", nullable: false),
+                    LastUpdatedBy = table.Column<string>(type: "TEXT", nullable: false),
+                    StartDate = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    EndDate = table.Column<DateTime>(type: "TEXT", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_UserRoles", x => new { x.RoleId, x.UserId });
                     table.ForeignKey(
                         name: "FK_UserRoles_AspNetRoles_RoleId",
                         column: x => x.RoleId,
@@ -351,6 +498,12 @@ namespace UserManagementAdmin.Migrations
                         name: "FK_UserRoles_AspNetUsers_UserId",
                         column: x => x.UserId,
                         principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_UserRoles_OrganizationUnits_ScopeOrganizationUnitId",
+                        column: x => x.ScopeOrganizationUnitId,
+                        principalTable: "OrganizationUnits",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -382,34 +535,15 @@ namespace UserManagementAdmin.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
-            migrationBuilder.CreateTable(
-                name: "RolePermissions",
-                columns: table => new
-                {
-                    Id = table.Column<string>(type: "TEXT", nullable: false),
-                    RoleId = table.Column<string>(type: "TEXT", nullable: false),
-                    PermissionId = table.Column<string>(type: "TEXT", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    CreatedBy = table.Column<string>(type: "TEXT", nullable: false),
-                    LastUpdatedBy = table.Column<string>(type: "TEXT", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_RolePermissions", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_RolePermissions_AspNetRoles_RoleId",
-                        column: x => x.RoleId,
-                        principalTable: "AspNetRoles",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_RolePermissions_Permissions_PermissionId",
-                        column: x => x.PermissionId,
-                        principalTable: "Permissions",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
+            migrationBuilder.CreateIndex(
+                name: "IX_AccessGroupPermissions_PermissionId",
+                table: "AccessGroupPermissions",
+                column: "PermissionId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AccessGroupRoles_RoleId",
+                table: "AccessGroupRoles",
+                column: "RoleId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetRoleClaims_RoleId",
@@ -443,14 +577,9 @@ namespace UserManagementAdmin.Migrations
                 column: "NormalizedEmail");
 
             migrationBuilder.CreateIndex(
-                name: "IX_AspNetUsers_BranchId",
+                name: "IX_AspNetUsers_DomicileUnitId",
                 table: "AspNetUsers",
-                column: "BranchId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_AspNetUsers_SubsidiaryId",
-                table: "AspNetUsers",
-                column: "SubsidiaryId");
+                column: "DomicileUnitId");
 
             migrationBuilder.CreateIndex(
                 name: "UserNameIndex",
@@ -459,24 +588,24 @@ namespace UserManagementAdmin.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_Branches_SubsidiaryId",
-                table: "Branches",
-                column: "SubsidiaryId");
+                name: "IX_OrganizationUnits_ParentId",
+                table: "OrganizationUnits",
+                column: "ParentId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Permissions_ActionId",
-                table: "Permissions",
-                column: "ActionId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Permissions_TypeId",
-                table: "Permissions",
+                name: "IX_OrganizationUnits_TypeId",
+                table: "OrganizationUnits",
                 column: "TypeId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Permissions_WorkflowId",
+                name: "IX_Permissions_PermissionTypeId",
                 table: "Permissions",
-                column: "WorkflowId");
+                column: "PermissionTypeId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Permissions_SubPermissionId",
+                table: "Permissions",
+                column: "SubPermissionId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_RolePermissions_PermissionId",
@@ -484,14 +613,29 @@ namespace UserManagementAdmin.Migrations
                 column: "PermissionId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_RolePermissions_RoleId",
-                table: "RolePermissions",
-                column: "RoleId");
+                name: "IX_UserAccessGroups_ScopeOrganizationUnitId",
+                table: "UserAccessGroups",
+                column: "ScopeOrganizationUnitId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_UserRoles_RoleId",
+                name: "IX_UserAccessGroups_UserId",
+                table: "UserAccessGroups",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserPermissions_ScopeOrganizationUnitId",
+                table: "UserPermissions",
+                column: "ScopeOrganizationUnitId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserPermissions_UserId",
+                table: "UserPermissions",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserRoles_ScopeOrganizationUnitId",
                 table: "UserRoles",
-                column: "RoleId");
+                column: "ScopeOrganizationUnitId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_UserRoles_UserId",
@@ -508,16 +652,17 @@ namespace UserManagementAdmin.Migrations
                 name: "IX_UserSessions_UserId",
                 table: "UserSessions",
                 column: "UserId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_WorkflowActions_WorkflowId",
-                table: "WorkflowActions",
-                column: "WorkflowId");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "AccessGroupPermissions");
+
+            migrationBuilder.DropTable(
+                name: "AccessGroupRoles");
+
             migrationBuilder.DropTable(
                 name: "AspNetRoleClaims");
 
@@ -537,10 +682,19 @@ namespace UserManagementAdmin.Migrations
                 name: "RolePermissions");
 
             migrationBuilder.DropTable(
+                name: "UserAccessGroups");
+
+            migrationBuilder.DropTable(
+                name: "UserPermissions");
+
+            migrationBuilder.DropTable(
                 name: "UserRoles");
 
             migrationBuilder.DropTable(
                 name: "UserSessions");
+
+            migrationBuilder.DropTable(
+                name: "AccessGroups");
 
             migrationBuilder.DropTable(
                 name: "Permissions");
@@ -555,16 +709,13 @@ namespace UserManagementAdmin.Migrations
                 name: "PermissionTypes");
 
             migrationBuilder.DropTable(
-                name: "WorkflowActions");
+                name: "SubPermissions");
 
             migrationBuilder.DropTable(
-                name: "Branches");
+                name: "OrganizationUnits");
 
             migrationBuilder.DropTable(
-                name: "WorkflowTypes");
-
-            migrationBuilder.DropTable(
-                name: "Subsidiaries");
+                name: "OrganizationUnitTypes");
         }
     }
 }

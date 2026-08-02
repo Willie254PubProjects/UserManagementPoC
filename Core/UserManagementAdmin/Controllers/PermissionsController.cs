@@ -10,8 +10,8 @@ namespace UserManagementAdmin.Controllers;
 [Route("api/permissions")]
 public class PermissionsController : ControllerBase
 {
-    private readonly IWorkflowAdministrationService _service;
-    public PermissionsController(IWorkflowAdministrationService service)
+    private readonly IPermissionAdministrationService _service;
+    public PermissionsController(IPermissionAdministrationService service)
     {
         _service = service;
     }
@@ -22,10 +22,10 @@ public class PermissionsController : ControllerBase
         var result = permissions.Select(p => new
         {
             p.Id,
-            p.Name,
-            Workflow = p.Workflow?.Name,
-            Action = p.Action?.Name,
-            Type = p.Type?.Name
+            p.Code,
+            p.Description,
+            PermissionType = p.Type?.Name,
+            SubPermission = p.SubPermission?.Name
         });
         return this.ApiOk(result);
     }

@@ -1,8 +1,12 @@
+using System.Security.Claims;
+
 using Microsoft.AspNetCore.Http;
 
 using UserManagementPoC.Shared.Abstractions;
 
 using UserManagementPoC.Shared.Authorization.Contracts;
+
+using UserManagementPoC.Shared.Authorization.DTOs;
 
 using UserManagementPoC.Shared.Authorization.Enums;
 
@@ -27,22 +31,32 @@ public class AuthorizationService : IAuthorizationEvaluator
     public async Task<AuthorizationResult> EvaluateAsync(AuthorizationContext context, CancellationToken cancellationToken = default)
     {
         var httpContext = _httpContextAccessor.HttpContext;
-        if (httpContext == null) 
+        if (httpContext == null)
             return AuthorizationResult.Denied("No HTTP context");
 
         var tokenSecurityVersion = httpContext.User.FindFirst("security_version")?.Value;
-        if (string.IsNullOrEmpty(tokenSecurityVersion)) 
+        if (string.IsNullOrEmpty(tokenSecurityVersion))
             return AuthorizationResult.Denied("No security version in token");
 
         var session = await _userManagementClient.GetSessionAsync(tokenSecurityVersion, cancellationToken);
 
-        if (session == null || !session.IsActive) 
+        if (session == null || !session.IsActive)
             return AuthorizationResult.Denied("Session invalid, expired, or logged out");
 
-        if (!context.Roles.Any() && !context.Permissions.Any() 
+        if (!context.Roles.Any() && !context.Permissions.Any()
             && context.Workflow == null)
         {
             return AuthorizationResult.Denied("No authorization requirements specified");
+        }
+
+        var resourceBank = context.BankId;
+        var resourceBranch = context.BranchId;
+        var userBank = httpContext.User.FindFirstValue("bank_id");
+
+        if (!string.IsNullOrEmpty(resourceBank) && !string.IsNullOrEmpty(userBank)
+            && !string.Equals(resourceBank, userBank, StringComparison.OrdinalIgnoreCase))
+        {
+            return AuthorizationResult.Denied("Resource is outside the user's subsidiary");
         }
 
         if (context.Roles.Any() || context.Workflow?.RequiredRoles.Any() == true)
@@ -54,13 +68,14 @@ public class AuthorizationService : IAuthorizationEvaluator
             {
                 requiredRoles.AddRange(context.Workflow.RequiredRoles);
             }
-            var matches = requiredRoles.Count(r => userRoles.Any(ur => string.Equals(ur, r, StringComparison.OrdinalIgnoreCase)));
+            var matches = requiredRoles.Count(r => userRoles.Any(ur =>
+                string.Equals(ur.Code, r, StringComparison.OrdinalIgnoreCase) && ScopeCovers(ur.Scope, resourceBranch)));
             var passed = context.Roles.Any() && context.Workflow?.RequiredRoles.Any() != true
                 ? context.Operator == AuthOperator.Or ? matches > 0 : matches == requiredRoles.Count
                 : matches > 0;
 
-            if (!passed) 
-                return AuthorizationResult.Denied("User lacks required roles");
+            if (!passed)
+                return AuthorizationResult.Denied("User lacks required roles for the resource scope");
 
         }
 
@@ -78,7 +93,8 @@ public class AuthorizationService : IAuthorizationEvaluator
                 requiredPermissions.AddRange(context.Workflow.RequiredPermissions);
 
             }
-            var matches = requiredPermissions.Count(req => userPermissions.Contains(req, StringComparer.OrdinalIgnoreCase));
+            var matches = requiredPermissions.Count(req => userPermissions.Any(p =>
+                string.Equals(p.Code, req, StringComparison.OrdinalIgnoreCase) && ScopeCovers(p.Scope, resourceBranch)));
             var effectiveOperator = context.Workflow != null && !context.Permissions.Any()
                 ? AuthOperator.Or
                 : context.Operator ?? AuthOperator.And;
@@ -86,18 +102,25 @@ public class AuthorizationService : IAuthorizationEvaluator
                 ? matches > 0
                 : matches == requiredPermissions.Count;
 
-            if (!passed) 
-                return AuthorizationResult.Denied("User lacks required permissions");
+            if (!passed)
+                return AuthorizationResult.Denied("User lacks required permissions for the resource scope");
 
         }
 
         return AuthorizationResult.Allowed();
     }
 
-    private async Task<IReadOnlySet<string>> GetCachedRolesAsync(string userId, string securityVersion, CancellationToken cancellationToken)
+    private static bool ScopeCovers(string[] scope, string? resourceBranch)
+    {
+        if (string.IsNullOrEmpty(resourceBranch)) return true;
+        if (scope == null || scope.Length == 0) return false;
+        return scope.Contains(resourceBranch, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private async Task<RoleDto[]> GetCachedRolesAsync(string userId, string securityVersion, CancellationToken cancellationToken)
     {
         var cacheKey = $"roles:{userId}:{securityVersion}";
-        var cached = await _cache.GetAsync<IReadOnlySet<string>>(cacheKey, cancellationToken);
+        var cached = await _cache.GetAsync<RoleDto[]>(cacheKey, cancellationToken);
         if (cached != null) return cached;
 
         var roles = await _userManagementClient.GetUserRolesAsync(userId, cancellationToken);
@@ -105,13 +128,14 @@ public class AuthorizationService : IAuthorizationEvaluator
         return roles;
     }
 
-    private async Task<IReadOnlySet<string>> GetCachedPermissionsAsync(string userId, string securityVersion, CancellationToken cancellationToken)
+    private async Task<PermissionDto[]> GetCachedPermissionsAsync(string userId, string securityVersion, CancellationToken cancellationToken)
     {
         var cacheKey = $"permissions:{userId}:{securityVersion}";
-        var cached = await _cache.GetAsync<IReadOnlySet<string>>(cacheKey, cancellationToken);
+        var cached = await _cache.GetAsync<PermissionDto[]>(cacheKey, cancellationToken);
         if (cached != null) return cached;
 
         var permissions = await _userManagementClient.GetUserPermissionsAsync(userId, cancellationToken);
         await _cache.SetAsync(cacheKey, permissions, PermissionCacheTtl, cancellationToken);
         return permissions;
-    }}
+    }
+}

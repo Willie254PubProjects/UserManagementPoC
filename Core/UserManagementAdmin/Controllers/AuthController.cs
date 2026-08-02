@@ -21,14 +21,33 @@ public class AuthController : ControllerBase
     private readonly IEncryptionService _encryptionService;
     private readonly IUserSessionService _userSessionService;
     private readonly IPermissionAssignmentService _permissionAssignmentService;
+    private readonly IOrganizationUnitService _organizationUnitService;
 
-    public AuthController(UserManager<BshUser> userManager, SignInManager<BshUser> signInManager, IEncryptionService encryptionService, IUserSessionService userSessionService, IPermissionAssignmentService permissionAssignmentService)
+    public AuthController(UserManager<BshUser> userManager, SignInManager<BshUser> signInManager, IEncryptionService encryptionService, IUserSessionService userSessionService, IPermissionAssignmentService permissionAssignmentService, IOrganizationUnitService organizationUnitService)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _encryptionService = encryptionService;
         _userSessionService = userSessionService;
         _permissionAssignmentService = permissionAssignmentService;
+        _organizationUnitService = organizationUnitService;
+    }
+
+    private async Task<UserInfo> MapToUserInfoAsync(BshUser user)
+    {
+        var codes = await _organizationUnitService.ResolveCodesAsync(user.DomicileUnitId);
+        return new UserInfo
+        {
+            Id = user.Id,
+            UserName = user.UserName ?? "",
+            Email = user.Email ?? "",
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            BankId = codes.BankId,
+            BranchId = codes.BranchId,
+            CountryCode = codes.CountryCode,
+            IsAuthenticated = true
+        };
     }
 
     [AllowAnonymous]
@@ -37,7 +56,6 @@ public class AuthController : ControllerBase
     {
         var password = _encryptionService.Decrypt(request.EncryptedPassword, request.Iv);
         var user = await _userManager.Users
-            .Include(u => u.Subsidiary)
             .FirstOrDefaultAsync(u => u.NormalizedUserName == _userManager.NormalizeName(request.Username)
                 || u.NormalizedEmail == _userManager.NormalizeEmail(request.Username));
         if (user == null) return this.ApiOk(new VerifyCredentialsResponse
@@ -52,18 +70,7 @@ public class AuthController : ControllerBase
         return this.ApiOk(new VerifyCredentialsResponse
         {
             Success = true,
-            User = new UserInfo
-            {
-                Id = user.Id,
-                UserName = user.UserName ?? "",
-                Email = user.Email ?? "",
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                BankId = user.Subsidiary.BankId.ToString(),
-                BranchId = user.BranchId,
-                CountryCode = user.Subsidiary.CountryCode,
-                IsAuthenticated = true
-            }
+            User = await MapToUserInfoAsync(user)
         });
     }
 
@@ -71,21 +78,9 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> GetUserById(string id)
     {
         var user = await _userManager.Users
-            .Include(u => u.Subsidiary)
             .FirstOrDefaultAsync(u => u.Id == id);
         if (user == null) return this.ApiNotFound();
-        return this.ApiOk(new UserInfo
-        {
-            Id = user.Id,
-            UserName = user.UserName ?? "",
-            Email = user.Email ?? "",
-            FirstName = user.FirstName,
-            LastName = user.LastName,
-            BankId = user.Subsidiary.BankId.ToString(),
-            BranchId = user.BranchId,
-            CountryCode = user.Subsidiary.CountryCode,
-            IsAuthenticated = true
-        });
+        return this.ApiOk(await MapToUserInfoAsync(user));
     }
 
     [AllowAnonymous]
@@ -104,15 +99,15 @@ public class AuthController : ControllerBase
     {
         var user = await _userManager.FindByIdAsync(userId);
         if (user == null) return this.ApiNotFound();
-        var roles = await _userManager.GetRolesAsync(user);
+        var roles = await _permissionAssignmentService.GetUserRolesAsync(userId);
         return this.ApiOk(roles);
     }
 
     [HttpGet("users/{userId}/permissions")]
     public async Task<IActionResult> GetUserPermissions(string userId)
     {
-        var names = await _permissionAssignmentService.GetUserPermissionsAsync(userId);
-        return this.ApiOk(names);
+        var permissions = await _permissionAssignmentService.GetUserPermissionsAsync(userId);
+        return this.ApiOk(permissions);
     }
 
     [HttpGet("sessions/{securityVersion}")]

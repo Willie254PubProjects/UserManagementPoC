@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using UserManagementPoC.Shared.Helpers;
 using UserManagementPoC.Shared.Models;
 
@@ -8,7 +8,7 @@ namespace UserManagementAdmin.Models.Entities
     {
         [Key]
         public string Id { get; set; } = KeyGen.GenerateKey();
-        public string Name { get; set; } 
+        public string Name { get; set; } // CardPrinting | Account | CardRequest
         public string Description { get; set; }
     }
 }

@@ -10,7 +10,6 @@ namespace UserManagementAdmin.Models.Entities
 {
     public class RolePermission : BaseEntity
     {
-        [Key] public string Id { get; set; } = KeyGen.GenerateKey();
         [ForeignKey(nameof(Role))] public string RoleId { get; set; }
         public BshRole Role { get; set; }
         [ForeignKey(nameof(Permission))] public string PermissionId { get; set; }

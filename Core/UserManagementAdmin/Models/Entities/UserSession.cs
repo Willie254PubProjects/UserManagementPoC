@@ -13,12 +13,13 @@ namespace UserManagementAdmin.Models.Entities
         [Key] public string Id { get; set; } = KeyGen.GenerateKey();
         [ForeignKey(nameof(User))] 
         public string UserId { get; set; }
-        public BshUser User { get; set; }
         public string? RemoteIP { get; set; } = string.Empty;
         public string? UserAgent { get; set; } = string.Empty;
         public string SecurityVersion { get; set; } = KeyGen.GenerateKey();
         public DateTime? LastAccessedAt { get; set; }
         public bool IsActive { get; set; } = true;
+
+        public BshUser User { get; set; }
 
     }
 }

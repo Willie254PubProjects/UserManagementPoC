@@ -12,7 +12,7 @@ These documents define the shared understanding of the solution. Any work that d
 
 ## Living Documents
 
-The vision document and plans are **living** — they evolve as development progresses. All 8 initial phases are implemented, but the project remains under active development with anticipated changes and additions.
+The vision document and plans are **living** — they evolve as development progresses. Phases 1–10 are implemented and Phase 11 is in progress, but the project remains under active development with anticipated changes and additions.
 
 ## Scope Addition Workflow
 

@@ -45,7 +45,7 @@ public class UsersController : ControllerBase
     [HttpPost("{id}/roles")]
     public async Task<IActionResult> AssignRole(string id, [FromBody] RoleRequest request)
     {
-        var result = await _userService.AssignRoleAsync(id, request.RoleName);
+        var result = await _userService.AssignRoleAsync(id, request.RoleName, request.ScopeOrganizationUnitId, request.CascadeOrgStructure);
         if (!result.Succeeded) return this.ApiBadRequest(result, "Role assignment failed");
         return this.ApiOk("Role assigned");
     }

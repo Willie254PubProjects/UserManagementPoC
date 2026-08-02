@@ -28,7 +28,7 @@ public class RoleService : IRoleService
     }
     public async Task<IdentityResult> CreateAsync(string name)
     {
-        return await _roleManager.CreateAsync(new BshRole { Name = name });
+        return await _roleManager.CreateAsync(new BshRole { Name = name, Description = name });
     }
     public async Task<IdentityResult> DeleteAsync(string roleId)
     {

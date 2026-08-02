@@ -16,10 +16,8 @@ namespace UserManagementAdmin.Models.Entities
         public string LastUpdatedBy { get; set; }
         public DateTime StartDate { get; set; }
         public DateTime? EndDate { get; set; }
-        [ForeignKey(nameof(Subsidiary))] public string SubsidiaryId { get; set; }
-        public Subsidiary Subsidiary { get; set; }
-        [ForeignKey(nameof(Branch))] public string BranchId { get; set; }
-        public Branch Branch { get; set; }
+        [ForeignKey(nameof(DomicileUnit))] public string DomicileUnitId { get; set; }
+        public OrganizationUnit DomicileUnit { get; set; }
         public IEnumerable<UserRole> Roles { get; set; } = new List<UserRole>();
 
     }

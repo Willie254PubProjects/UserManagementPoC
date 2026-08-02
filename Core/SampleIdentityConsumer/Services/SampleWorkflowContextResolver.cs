@@ -1,3 +1,5 @@
+using UserManagementPoC.Shared.Authorization.Constants;
+
 using UserManagementPoC.Shared.Authorization.Contracts;
 
 using UserManagementPoC.Shared.Authorization.Models;
@@ -31,10 +33,24 @@ public class SampleWorkflowContextResolver : IWorkflowContextResolver
         // In production this could be a DB lookup, config, or service call.
         return (workflow, action) switch
         {
-            ("Loan", "Create") => (["Loan.Create.Invoke"], []),
-            ("Loan", "View") => (["Loan.View.*"], []),
-            ("Loan", "Edit") => (["Loan.Edit.*"], []),
-            ("Loan", "Approve") => (["Loan.Approve.*"], []),
+            ("CardPrinting", "Create") => ([Permissions.CardPrinting.Create], []),
+            ("CardPrinting", "View") => ([Permissions.CardPrinting.View], []),
+            ("CardPrinting", "Edit") => ([Permissions.CardPrinting.Edit], []),
+            ("CardPrinting", "Approve") => ([Permissions.CardPrinting.Approve], []),
+            ("CardPrinting", "Submit") => ([Permissions.CardPrinting.Submit], []),
+            ("CardPrinting", "Invoke") => ([Permissions.CardPrinting.Invoke], []),
+            ("Account", "Create") => ([Permissions.Account.Create], []),
+            ("Account", "View") => ([Permissions.Account.View], []),
+            ("Account", "Edit") => ([Permissions.Account.Edit], []),
+            ("Account", "Approve") => ([Permissions.Account.Approve], []),
+            ("Account", "Submit") => ([Permissions.Account.Submit], []),
+            ("Account", "Invoke") => ([Permissions.Account.Invoke], []),
+            ("CardRequest", "Create") => ([Permissions.CardRequest.Create], []),
+            ("CardRequest", "View") => ([Permissions.CardRequest.View], []),
+            ("CardRequest", "Edit") => ([Permissions.CardRequest.Edit], []),
+            ("CardRequest", "Approve") => ([Permissions.CardRequest.Approve], []),
+            ("CardRequest", "Submit") => ([Permissions.CardRequest.Submit], []),
+            ("CardRequest", "Invoke") => ([Permissions.CardRequest.Invoke], []),
             _ => ([], [])
         };
     }

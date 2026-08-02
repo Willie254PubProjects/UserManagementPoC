@@ -8,11 +8,11 @@ using UserManagementAdmin.Persistence;
 
 #nullable disable
 
-namespace UserManagementAdmin.Migrations
+namespace UserManagementAdmin.Persistence.Migrations
 {
     [DbContext(typeof(AdminDbContext))]
-    [Migration("20260729163158_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20260802212249_AddRoleDescription")]
+    partial class AddRoleDescription
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -122,14 +122,16 @@ namespace UserManagementAdmin.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("UserManagementAdmin.Models.Entities.Branch", b =>
+            modelBuilder.Entity("UserManagementAdmin.Models.Entities.AccessGroup", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("BranchCode")
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
                         .IsRequired()
-                        .HasMaxLength(50)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Description")
@@ -137,20 +139,57 @@ namespace UserManagementAdmin.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime?>("EndDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LastUpdatedBy")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("SubsidiaryId")
-                        .IsRequired()
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("SubsidiaryId");
+                    b.ToTable("AccessGroups", (string)null);
+                });
 
-                    b.ToTable("Branches", (string)null);
+            modelBuilder.Entity("UserManagementAdmin.Models.Entities.AccessGroupPermission", b =>
+                {
+                    b.Property<string>("AccessGroupId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PermissionId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("AccessGroupId", "PermissionId");
+
+                    b.HasIndex("PermissionId");
+
+                    b.ToTable("AccessGroupPermissions", (string)null);
+                });
+
+            modelBuilder.Entity("UserManagementAdmin.Models.Entities.AccessGroupRole", b =>
+                {
+                    b.Property<string>("AccessGroupId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RoleId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("AccessGroupId", "RoleId");
+
+                    b.HasIndex("RoleId");
+
+                    b.ToTable("AccessGroupRoles", (string)null);
                 });
 
             modelBuilder.Entity("UserManagementAdmin.Models.Entities.BshRole", b =>
@@ -167,6 +206,11 @@ namespace UserManagementAdmin.Migrations
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("EndDate")
@@ -207,10 +251,6 @@ namespace UserManagementAdmin.Migrations
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("BranchId")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("TEXT");
@@ -219,6 +259,10 @@ namespace UserManagementAdmin.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DomicileUnitId")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
@@ -273,10 +317,6 @@ namespace UserManagementAdmin.Migrations
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("SubsidiaryId")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("INTEGER");
 
@@ -289,7 +329,7 @@ namespace UserManagementAdmin.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("BranchId");
+                    b.HasIndex("DomicileUnitId");
 
                     b.HasIndex("NormalizedEmail")
                         .HasDatabaseName("EmailIndex");
@@ -298,9 +338,108 @@ namespace UserManagementAdmin.Migrations
                         .IsUnique()
                         .HasDatabaseName("UserNameIndex");
 
-                    b.HasIndex("SubsidiaryId");
-
                     b.ToTable("AspNetUsers", (string)null);
+                });
+
+            modelBuilder.Entity("UserManagementAdmin.Models.Entities.OrganizationUnit", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CountryCode")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("EndDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LastUpdatedBy")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ParentId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TypeId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UnitCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ParentId");
+
+                    b.HasIndex("TypeId");
+
+                    b.ToTable("OrganizationUnits", (string)null);
+                });
+
+            modelBuilder.Entity("UserManagementAdmin.Models.Entities.OrganizationUnitType", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("EndDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LastUpdatedBy")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("OrganizationUnitTypes", (string)null);
                 });
 
             modelBuilder.Entity("UserManagementAdmin.Models.Entities.Permission", b =>
@@ -308,13 +447,14 @@ namespace UserManagementAdmin.Migrations
                     b.Property<string>("Id")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("ActionId")
-                        .HasColumnType("TEXT");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
@@ -325,32 +465,99 @@ namespace UserManagementAdmin.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("PermissionTypeId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("TypeId")
+                    b.Property<string>("SubPermissionId")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("WorkflowId")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("ActionId");
+                    b.HasIndex("PermissionTypeId");
 
-                    b.HasIndex("TypeId");
-
-                    b.HasIndex("WorkflowId");
+                    b.HasIndex("SubPermissionId");
 
                     b.ToTable("Permissions", (string)null);
                 });
 
             modelBuilder.Entity("UserManagementAdmin.Models.Entities.PermissionType", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("EndDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LastUpdatedBy")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PermissionTypes", (string)null);
+                });
+
+            modelBuilder.Entity("UserManagementAdmin.Models.Entities.RolePermission", b =>
+                {
+                    b.Property<string>("RoleId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PermissionId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LastUpdatedBy")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("RoleId", "PermissionId");
+
+                    b.HasIndex("PermissionId");
+
+                    b.ToTable("RolePermissions", (string)null);
+                });
+
+            modelBuilder.Entity("UserManagementAdmin.Models.Entities.SubPermission", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("TEXT");
@@ -387,68 +594,25 @@ namespace UserManagementAdmin.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("PermissionTypes", (string)null);
+                    b.ToTable("SubPermissions", (string)null);
                 });
 
-            modelBuilder.Entity("UserManagementAdmin.Models.Entities.RolePermission", b =>
+            modelBuilder.Entity("UserManagementAdmin.Models.Entities.UserAccessGroup", b =>
                 {
-                    b.Property<string>("Id")
+                    b.Property<string>("AccessGroupId")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<string>("UserId")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("LastUpdatedBy")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("PermissionId")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("RoleId")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PermissionId");
-
-                    b.HasIndex("RoleId");
-
-                    b.ToTable("RolePermissions", (string)null);
-                });
-
-            modelBuilder.Entity("UserManagementAdmin.Models.Entities.Subsidiary", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("BankId")
+                    b.Property<bool>("CascadeOrgStructure")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("CountryCode")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("TEXT");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasMaxLength(500)
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("EndDate")
@@ -458,21 +622,35 @@ namespace UserManagementAdmin.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("ScopeOrganizationUnitId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("TEXT");
 
-                    b.HasKey("Id");
+                    b.HasKey("AccessGroupId", "UserId");
 
-                    b.ToTable("Subsidiaries", (string)null);
+                    b.HasIndex("ScopeOrganizationUnitId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UserAccessGroups", (string)null);
                 });
 
-            modelBuilder.Entity("UserManagementAdmin.Models.Entities.UserRole", b =>
+            modelBuilder.Entity("UserManagementAdmin.Models.Entities.UserPermission", b =>
                 {
-                    b.Property<string>("Id")
+                    b.Property<string>("PermissionId")
                         .HasColumnType("TEXT");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("CascadeOrgStructure")
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
@@ -481,24 +659,70 @@ namespace UserManagementAdmin.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime?>("EndDate")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("LastUpdatedBy")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("RoleId")
+                    b.Property<string>("ScopeOrganizationUnitId")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("StartDate")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("TEXT");
 
+                    b.HasKey("PermissionId", "UserId");
+
+                    b.HasIndex("ScopeOrganizationUnitId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UserPermissions", (string)null);
+                });
+
+            modelBuilder.Entity("UserManagementAdmin.Models.Entities.UserRole", b =>
+                {
+                    b.Property<string>("RoleId")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("CascadeOrgStructure")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.HasKey("Id");
+                    b.Property<DateTime?>("EndDate")
+                        .HasColumnType("TEXT");
 
-                    b.HasIndex("RoleId");
+                    b.Property<string>("LastUpdatedBy")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ScopeOrganizationUnitId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("RoleId", "UserId");
+
+                    b.HasIndex("ScopeOrganizationUnitId");
 
                     b.HasIndex("UserId");
 
@@ -556,92 +780,6 @@ namespace UserManagementAdmin.Migrations
                     b.ToTable("UserSessions", (string)null);
                 });
 
-            modelBuilder.Entity("UserManagementAdmin.Models.Entities.WorkflowAction", b =>
-                {
-                    b.Property<string>("ActionId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime?>("EndDate")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("LastUpdatedBy")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("StartDate")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("WorkflowId")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("ActionId");
-
-                    b.HasIndex("WorkflowId");
-
-                    b.ToTable("WorkflowActions", (string)null);
-                });
-
-            modelBuilder.Entity("UserManagementAdmin.Models.Entities.WorkflowType", b =>
-                {
-                    b.Property<string>("WorkflowId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime?>("EndDate")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("LastUpdatedBy")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("StartDate")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("WorkflowId");
-
-                    b.ToTable("WorkflowTypes", (string)null);
-                });
-
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("UserManagementAdmin.Models.Entities.BshRole", null)
@@ -693,59 +831,90 @@ namespace UserManagementAdmin.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("UserManagementAdmin.Models.Entities.Branch", b =>
+            modelBuilder.Entity("UserManagementAdmin.Models.Entities.AccessGroupPermission", b =>
                 {
-                    b.HasOne("UserManagementAdmin.Models.Entities.Subsidiary", "Subsidiary")
-                        .WithMany("Branches")
-                        .HasForeignKey("SubsidiaryId")
+                    b.HasOne("UserManagementAdmin.Models.Entities.AccessGroup", "AccessGroup")
+                        .WithMany("Permissions")
+                        .HasForeignKey("AccessGroupId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Subsidiary");
+                    b.HasOne("UserManagementAdmin.Models.Entities.Permission", "Permission")
+                        .WithMany("AccessGroups")
+                        .HasForeignKey("PermissionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AccessGroup");
+
+                    b.Navigation("Permission");
+                });
+
+            modelBuilder.Entity("UserManagementAdmin.Models.Entities.AccessGroupRole", b =>
+                {
+                    b.HasOne("UserManagementAdmin.Models.Entities.AccessGroup", "AccessGroup")
+                        .WithMany("Roles")
+                        .HasForeignKey("AccessGroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("UserManagementAdmin.Models.Entities.BshRole", "Role")
+                        .WithMany("AccessGroups")
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AccessGroup");
+
+                    b.Navigation("Role");
                 });
 
             modelBuilder.Entity("UserManagementAdmin.Models.Entities.BshUser", b =>
                 {
-                    b.HasOne("UserManagementAdmin.Models.Entities.Branch", "Branch")
+                    b.HasOne("UserManagementAdmin.Models.Entities.OrganizationUnit", "DomicileUnit")
                         .WithMany()
-                        .HasForeignKey("BranchId")
+                        .HasForeignKey("DomicileUnitId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("UserManagementAdmin.Models.Entities.Subsidiary", "Subsidiary")
-                        .WithMany()
-                        .HasForeignKey("SubsidiaryId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Branch");
-
-                    b.Navigation("Subsidiary");
+                    b.Navigation("DomicileUnit");
                 });
 
-            modelBuilder.Entity("UserManagementAdmin.Models.Entities.Permission", b =>
+            modelBuilder.Entity("UserManagementAdmin.Models.Entities.OrganizationUnit", b =>
                 {
-                    b.HasOne("UserManagementAdmin.Models.Entities.WorkflowAction", "Action")
-                        .WithMany()
-                        .HasForeignKey("ActionId");
+                    b.HasOne("UserManagementAdmin.Models.Entities.OrganizationUnit", "Parent")
+                        .WithMany("Children")
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("UserManagementAdmin.Models.Entities.PermissionType", "Type")
+                    b.HasOne("UserManagementAdmin.Models.Entities.OrganizationUnitType", "Type")
                         .WithMany()
                         .HasForeignKey("TypeId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("UserManagementAdmin.Models.Entities.WorkflowType", "Workflow")
+                    b.Navigation("Parent");
+
+                    b.Navigation("Type");
+                });
+
+            modelBuilder.Entity("UserManagementAdmin.Models.Entities.Permission", b =>
+                {
+                    b.HasOne("UserManagementAdmin.Models.Entities.PermissionType", "Type")
                         .WithMany()
-                        .HasForeignKey("WorkflowId")
+                        .HasForeignKey("PermissionTypeId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Action");
+                    b.HasOne("UserManagementAdmin.Models.Entities.SubPermission", "SubPermission")
+                        .WithMany()
+                        .HasForeignKey("SubPermissionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("SubPermission");
 
                     b.Navigation("Type");
-
-                    b.Navigation("Workflow");
                 });
 
             modelBuilder.Entity("UserManagementAdmin.Models.Entities.RolePermission", b =>
@@ -767,6 +936,60 @@ namespace UserManagementAdmin.Migrations
                     b.Navigation("Role");
                 });
 
+            modelBuilder.Entity("UserManagementAdmin.Models.Entities.UserAccessGroup", b =>
+                {
+                    b.HasOne("UserManagementAdmin.Models.Entities.AccessGroup", "AccessGroup")
+                        .WithMany()
+                        .HasForeignKey("AccessGroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("UserManagementAdmin.Models.Entities.OrganizationUnit", "OrganizationUnit")
+                        .WithMany()
+                        .HasForeignKey("ScopeOrganizationUnitId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("UserManagementAdmin.Models.Entities.BshUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AccessGroup");
+
+                    b.Navigation("OrganizationUnit");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("UserManagementAdmin.Models.Entities.UserPermission", b =>
+                {
+                    b.HasOne("UserManagementAdmin.Models.Entities.Permission", "Permission")
+                        .WithMany()
+                        .HasForeignKey("PermissionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("UserManagementAdmin.Models.Entities.OrganizationUnit", "OrganizationUnit")
+                        .WithMany()
+                        .HasForeignKey("ScopeOrganizationUnitId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("UserManagementAdmin.Models.Entities.BshUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("OrganizationUnit");
+
+                    b.Navigation("Permission");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("UserManagementAdmin.Models.Entities.UserRole", b =>
                 {
                     b.HasOne("UserManagementAdmin.Models.Entities.BshRole", "Role")
@@ -775,11 +998,19 @@ namespace UserManagementAdmin.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("UserManagementAdmin.Models.Entities.OrganizationUnit", "OrganizationUnit")
+                        .WithMany()
+                        .HasForeignKey("ScopeOrganizationUnitId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("UserManagementAdmin.Models.Entities.BshUser", "User")
                         .WithMany("Roles")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("OrganizationUnit");
 
                     b.Navigation("Role");
 
@@ -797,19 +1028,17 @@ namespace UserManagementAdmin.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("UserManagementAdmin.Models.Entities.WorkflowAction", b =>
+            modelBuilder.Entity("UserManagementAdmin.Models.Entities.AccessGroup", b =>
                 {
-                    b.HasOne("UserManagementAdmin.Models.Entities.WorkflowType", "Workflow")
-                        .WithMany("Actions")
-                        .HasForeignKey("WorkflowId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                    b.Navigation("Permissions");
 
-                    b.Navigation("Workflow");
+                    b.Navigation("Roles");
                 });
 
             modelBuilder.Entity("UserManagementAdmin.Models.Entities.BshRole", b =>
                 {
+                    b.Navigation("AccessGroups");
+
                     b.Navigation("Permissions");
 
                     b.Navigation("Users");
@@ -820,19 +1049,16 @@ namespace UserManagementAdmin.Migrations
                     b.Navigation("Roles");
                 });
 
+            modelBuilder.Entity("UserManagementAdmin.Models.Entities.OrganizationUnit", b =>
+                {
+                    b.Navigation("Children");
+                });
+
             modelBuilder.Entity("UserManagementAdmin.Models.Entities.Permission", b =>
                 {
+                    b.Navigation("AccessGroups");
+
                     b.Navigation("Roles");
-                });
-
-            modelBuilder.Entity("UserManagementAdmin.Models.Entities.Subsidiary", b =>
-                {
-                    b.Navigation("Branches");
-                });
-
-            modelBuilder.Entity("UserManagementAdmin.Models.Entities.WorkflowType", b =>
-                {
-                    b.Navigation("Actions");
                 });
 #pragma warning restore 612, 618
         }

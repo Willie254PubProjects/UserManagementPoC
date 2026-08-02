@@ -4,6 +4,8 @@ using UserManagementPoC.Shared.Responses;
 
 using UserManagementPoC.Shared.Security.Models;
 
+using UserManagementPoC.Shared.Authorization.DTOs;
+
 using UserManagementPoC.Shared.Authorization.Models;
 
 namespace UserManagementPoC.Identity.Services;
@@ -37,13 +39,13 @@ public class UserManagementApiClient : IUserManagementApiClient
 
         return apiResponse?.Data;
     }
-    public async Task<IReadOnlySet<string>> GetUserRolesAsync(string userId, CancellationToken cancellationToken = default)
+    public async Task<RoleDto[]> GetUserRolesAsync(string userId, CancellationToken cancellationToken = default)
     {
         var apiResponse = await _flurlClient.Request("/api/auth/users", userId, "roles")
                                             .AllowAnyHttpStatus()
-                                            .GetJsonAsync<ApiResponse<string[]>>(cancellationToken: cancellationToken);
+                                            .GetJsonAsync<ApiResponse<RoleDto[]>>(cancellationToken: cancellationToken);
 
-        return apiResponse?.Data?.ToHashSet() ?? new HashSet<string>();
+        return apiResponse?.Data ?? [];
     }
     public async Task<bool> InvalidateSessionAsync(string securityVersion, CancellationToken cancellationToken = default)
     {
@@ -53,13 +55,13 @@ public class UserManagementApiClient : IUserManagementApiClient
 
         return response.ResponseMessage.IsSuccessStatusCode;
     }
-    public async Task<IReadOnlySet<string>> GetUserPermissionsAsync(string userId, CancellationToken cancellationToken = default)
+    public async Task<PermissionDto[]> GetUserPermissionsAsync(string userId, CancellationToken cancellationToken = default)
     {
         var apiResponse = await _flurlClient.Request("/api/auth/users", userId, "permissions")
                                             .AllowAnyHttpStatus()
-                                            .GetJsonAsync<ApiResponse<string[]>>(cancellationToken: cancellationToken);
+                                            .GetJsonAsync<ApiResponse<PermissionDto[]>>(cancellationToken: cancellationToken);
 
-        return apiResponse?.Data?.ToHashSet() ?? new HashSet<string>();
+        return apiResponse?.Data ?? [];
     }
     public async Task<SessionValidationResult?> GetSessionAsync(string securityVersion, CancellationToken cancellationToken = default)
     {

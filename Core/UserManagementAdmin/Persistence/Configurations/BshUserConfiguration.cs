@@ -10,8 +10,7 @@ namespace UserManagementAdmin.Persistence.Configurations
     {
         public void Configure(EntityTypeBuilder<BshUser> builder)
         {
-            builder.HasOne(u => u.Subsidiary).WithMany().HasForeignKey(u => u.SubsidiaryId);
-            builder.HasOne(u => u.Branch).WithMany().HasForeignKey(u => u.BranchId);
+            builder.HasOne(u => u.DomicileUnit).WithMany().HasForeignKey(u => u.DomicileUnitId);
         }
     }
 }

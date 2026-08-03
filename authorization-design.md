@@ -483,7 +483,7 @@ public IActionResult AdminOnly() { ... }
 
 All attribute values reference the shared constants
 (`Permissions.*` for permissions, `BshRoles.*` for roles) defined in
-§6.4 -- never hand-typed strings.
+6.4 -- never hand-typed strings.
 
 Multiple attributes on the same endpoint combine with **AND**
 semantics -- each attribute produces its own `IdentityAuthorizationRequirement`,
@@ -573,7 +573,7 @@ The `AuthorizationPolicyProvider` reverses this:
 
 The box shows the authorization subset of the admin service. It also
 exposes the auth endpoints used during login (`POST /api/auth/verify-credentials`,
-`POST /api/auth/sessions`, `GET /api/auth/users/{id}`) -- see §10.1.
+`POST /api/auth/sessions`, `GET /api/auth/users/{id}`) -- see 11.1.
 
 ### 7.2 Handler: Two Branches
 
@@ -682,7 +682,7 @@ consumed by the authorization engine to enforce organizational scope:
 the requesting user's assigned roles/permissions must align with the
 resolved scope (a specific subsidiary/branch) for the call to be
 allowed. The handler resolves them with the precedence `Workflow` →
-`IResourceScopeResolver` → current-user claims (see §7.2).
+`IResourceScopeResolver` → current-user claims (see 7.2).
 
 ### 7.4 Resource Scope Enforcement and Flexibility
 
@@ -841,7 +841,44 @@ authorization logic.
 
 ------------------------------------------------------------------------
 
-## 9. Client Integration Walkthrough
+## 9. Authorization Availability & Resilience
+
+The Identity service is the single authorization authority and is
+deployed as a stateless, horizontally scalable cluster behind a load
+balancer. Authorization follows a **fail-closed** model: if a decision
+cannot be computed safely, access is denied.
+
+-   **Stateless, horizontally scalable deployment** — Identity is
+    deployed with multiple instances behind a load balancer to eliminate
+    single points of failure.
+-   **Two-level cache** — authorization data is cached using a two-level
+    cache:
+    -   **L1**: in-memory cache per Identity instance
+    -   **L2**: distributed cache (Redis)
+-   **Degraded operation** — if UserManagementAdmin is temporarily
+    unavailable, Identity continues serving requests from valid cached
+    authorization profiles until cache expiry.
+-   **Total outage** — if both the cache and UserManagementAdmin are
+    unavailable, authorization requests fail with a **503 Service
+    Unavailable** (or **403 Forbidden** if a decision can be
+    definitively made), ensuring no unauthorized access is granted.
+-   **Resilient downstream calls** — communication with
+    UserManagementAdmin is protected using timeout, retry, and circuit
+    breaker policies.
+-   **Health endpoints** — Identity exposes health endpoints and is
+    deployed with multiple instances behind a load balancer.
+
+> **Current PoC**: the L1 in-memory cache (`MemoryCacheService`) is
+> implemented; L2 Redis is an `ICacheService` extension point (see 8.5).
+> Outbound HTTP to UserManagementAdmin already uses the standard
+> resilience handler (timeout, retry, circuit breaker). Health endpoints
+> are exposed via ServiceDefaults (`/health`, `/alive`). The 503/403
+> response behavior above is a production recommendation, not yet
+> implemented.
+
+------------------------------------------------------------------------
+
+## 10. Client Integration Walkthrough
 
 A new application requires four steps.
 
@@ -964,9 +1001,9 @@ policy resolution, evaluation -- is handled by the framework.
 
 ------------------------------------------------------------------------
 
-## 10. Complete Data Flows
+## 11. Complete Data Flows
 
-### 10.1 Login Flow
+### 11.1 Login Flow
 
 ```
 Client                     Identity                   UserManagementAdmin
@@ -999,7 +1036,7 @@ Client                     Identity                   UserManagementAdmin
   │◄─────────────────────────│                              │
 ```
 
-### 10.2 Workflow Authorization Flow
+### 11.2 Workflow Authorization Flow
 
 ```
 Client                     Identity                   UserManagementAdmin
@@ -1053,7 +1090,7 @@ Client                     Identity                   UserManagementAdmin
   │◄─────────────────────────│                              │
 ```
 
-### 10.3 Direct Attribute Authorization Flow
+### 11.3 Direct Attribute Authorization Flow
 
 ```
 Client                     Identity                   UserManagementAdmin
@@ -1085,7 +1122,7 @@ Client                     Identity                   UserManagementAdmin
   │◄─────────────────────────│                              │
 ```
 
-### 10.4 Logout Flow
+### 11.4 Logout Flow
 
 ```
 Client                     Identity                   UserManagementAdmin
@@ -1124,7 +1161,7 @@ freshly fetched and cached under the new key.
 
 ------------------------------------------------------------------------
 
-## 11. Design Rules
+## 12. Design Rules
 
 1.  **Separate authentication from authorization data.** The Identity
     service exposes distinct API routes (`api/auth/*` and
@@ -1175,7 +1212,7 @@ freshly fetched and cached under the new key.
 
 ------------------------------------------------------------------------
 
-## 12. End-to-End Principle
+## 13. End-to-End Principle
 
 ``` text
 ┌─────────────────────────────────────────────────────────────┐

@@ -54,7 +54,7 @@ public class SampleWorkflowController : ControllerBase
     }
 
     [HttpGet("admin-only")]
-    [AuthorizeAnyRole("Administrator")]
+    [AuthorizeAnyRole(BshRoles.Administrator)]
     public IActionResult AdminOnly()
     {
         return this.ApiOk(new

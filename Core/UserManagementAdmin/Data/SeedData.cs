@@ -78,59 +78,65 @@ public static class SeedData
         context.Set<Permission>().AddRange(allPermissions);
         await context.SaveChangesAsync();
 
-        var subsidiaryType = new OrganizationUnitType
+        var types = new Dictionary<string, OrganizationUnitType>();
+        foreach (var (name, desc, isSubsidiary) in new[] {
+            ("Group", "Holding group root", false),
+            ("Subsidiary", "Top-level subsidiary", true),
+            ("Department", "Functional department", false),
+            ("RegionalBranch", "Regional branch", false),
+            ("Branch", "Operational branch unit", false)
+        })
         {
-            Name = "Subsidiary",
-            Description = "Top-level organizational unit",
-            CreatedAt = now,
-            UpdatedAt = now,
-            CreatedBy = systemUser,
-            LastUpdatedBy = systemUser,
-            StartDate = now
-        };
-        var branchType = new OrganizationUnitType
-        {
-            Name = "Branch",
-            Description = "Operational branch unit",
-            CreatedAt = now,
-            UpdatedAt = now,
-            CreatedBy = systemUser,
-            LastUpdatedBy = systemUser,
-            StartDate = now
-        };
-        context.Set<OrganizationUnitType>().AddRange(subsidiaryType, branchType);
+            var t = new OrganizationUnitType
+            {
+                Name = name,
+                Description = desc,
+                IsSubsidiary = isSubsidiary,
+                CreatedAt = now,
+                UpdatedAt = now,
+                CreatedBy = systemUser,
+                LastUpdatedBy = systemUser,
+                StartDate = now
+            };
+            context.Set<OrganizationUnitType>().Add(t);
+            types[name] = t;
+        }
         await context.SaveChangesAsync();
 
-        var hq = new OrganizationUnit
+        var units = new Dictionary<string, OrganizationUnit>();
+        OrganizationUnit AddUnit(string key, string name, string description, string typeKey, string unitCode, string countryCode, string? parentKey = null)
         {
-            Name = "Main Subsidiary",
-            Description = "Headquarters subsidiary",
-            TypeId = subsidiaryType.Id,
-            UnitCode = "KE",
-            CountryCode = "KE",
-            CreatedAt = now,
-            UpdatedAt = now,
-            CreatedBy = systemUser,
-            LastUpdatedBy = systemUser,
-            StartDate = now
-        };
-        context.Set<OrganizationUnit>().Add(hq);
-        await context.SaveChangesAsync();
-        var mainBranch = new OrganizationUnit
-        {
-            Name = "Main Branch",
-            Description = "Main branch unit",
-            TypeId = branchType.Id,
-            ParentId = hq.Id,
-            UnitCode = "001",
-            CountryCode = "KE",
-            CreatedAt = now,
-            UpdatedAt = now,
-            CreatedBy = systemUser,
-            LastUpdatedBy = systemUser,
-            StartDate = now
-        };
-        context.Set<OrganizationUnit>().Add(mainBranch);
+            var unit = new OrganizationUnit
+            {
+                Name = name,
+                Description = description,
+                TypeId = types[typeKey].Id,
+                UnitCode = unitCode,
+                CountryCode = countryCode,
+                ParentId = parentKey == null ? null : units[parentKey].Id,
+                Status = OrganizationUnitStatus.Active,
+                CreatedAt = now,
+                UpdatedAt = now,
+                CreatedBy = systemUser,
+                LastUpdatedBy = systemUser,
+                StartDate = now
+            };
+            context.Set<OrganizationUnit>().Add(unit);
+            units[key] = unit;
+            return unit;
+        }
+
+        AddUnit("group", "Equity Group Holdings", "Group holding company root", "Group", "0001", "KE");
+        AddUnit("ke", "KE Subsidiary", "Kenya subsidiary", "Subsidiary", "KE", "KE", "group");
+        AddUnit("ke-ops", "Kenya Operations", "Kenya operations department", "Department", "0002", "KE", "ke");
+        AddUnit("ke-tech", "Kenya Technology", "Kenya technology department", "Department", "0003", "KE", "ke");
+        AddUnit("nairobi", "Nairobi Regional Branch", "Nairobi region", "RegionalBranch", "0004", "KE", "ke");
+        AddUnit("nairobi-hq", "Nairobi HQ Branch", "Nairobi headquarters branch", "Branch", "0005", "KE", "nairobi");
+        AddUnit("westlands", "Westlands Branch", "Westlands branch", "Branch", "0006", "KE", "nairobi");
+        AddUnit("coast", "Coast Regional Branch", "Coast region", "RegionalBranch", "0007", "KE", "ke");
+        AddUnit("mombasa", "Mombasa Branch", "Mombasa branch", "Branch", "0008", "KE", "coast");
+        AddUnit("ug", "UG Subsidiary", "Uganda subsidiary", "Subsidiary", "UG", "UG", "group");
+        AddUnit("kampala", "Kampala Branch", "Kampala branch", "Branch", "0009", "UG", "ug");
         await context.SaveChangesAsync();
 
         var adminRole = new BshRole
@@ -178,9 +184,24 @@ public static class SeedData
             CreatedBy = systemUser,
             LastUpdatedBy = systemUser,
             StartDate = now,
-            DomicileUnitId = mainBranch.Id
+            DomicileUnitId = units["group"].Id
         };
         await userManager.CreateAsync(admin, "Admin@123!");
+
+        var manager = new BshUser
+        {
+            UserName = "manager",
+            Email = "manager@company.com",
+            FirstName = "Branch",
+            LastName = "Manager",
+            CreatedAt = now,
+            UpdatedAt = now,
+            CreatedBy = systemUser,
+            LastUpdatedBy = systemUser,
+            StartDate = now,
+            DomicileUnitId = units["nairobi-hq"].Id
+        };
+        await userManager.CreateAsync(manager, "Manager@123!");
 
         var viewer = new BshUser
         {
@@ -193,7 +214,7 @@ public static class SeedData
             CreatedBy = systemUser,
             LastUpdatedBy = systemUser,
             StartDate = now,
-            DomicileUnitId = mainBranch.Id
+            DomicileUnitId = units["mombasa"].Id
         };
         await userManager.CreateAsync(viewer, "Viewer@123!");
 
@@ -201,8 +222,22 @@ public static class SeedData
         {
             RoleId = adminRole.Id,
             UserId = admin.Id,
-            ScopeOrganizationUnitId = hq.Id,
+            ScopeOrganizationUnitId = units["group"].Id,
             CascadeOrgStructure = true,
+            Status = AssignmentStatus.Active,
+            CreatedAt = now,
+            UpdatedAt = now,
+            CreatedBy = systemUser,
+            LastUpdatedBy = systemUser,
+            StartDate = now
+        });
+        context.Set<UserRole>().Add(new UserRole
+        {
+            RoleId = managerRole.Id,
+            UserId = manager.Id,
+            ScopeOrganizationUnitId = units["nairobi-hq"].Id,
+            CascadeOrgStructure = false,
+            Status = AssignmentStatus.Active,
             CreatedAt = now,
             UpdatedAt = now,
             CreatedBy = systemUser,
@@ -213,8 +248,9 @@ public static class SeedData
         {
             RoleId = viewerRole.Id,
             UserId = viewer.Id,
-            ScopeOrganizationUnitId = mainBranch.Id,
-            CascadeOrgStructure = false,
+            ScopeOrganizationUnitId = units["coast"].Id,
+            CascadeOrgStructure = true,
+            Status = AssignmentStatus.Active,
             CreatedAt = now,
             UpdatedAt = now,
             CreatedBy = systemUser,
@@ -232,12 +268,34 @@ public static class SeedData
             LastUpdatedBy = systemUser,
             StartDate = now
         };
-        context.Set<AccessGroup>().Add(opsGroup);
+        var corporateGroup = new AccessGroup
+        {
+            Name = "Corporate Governance",
+            Description = "Corporate governance permissions",
+            CreatedAt = now,
+            UpdatedAt = now,
+            CreatedBy = systemUser,
+            LastUpdatedBy = systemUser,
+            StartDate = now
+        };
+        context.Set<AccessGroup>().AddRange(opsGroup, corporateGroup);
         await context.SaveChangesAsync();
+
+        context.Set<AccessGroupRole>().Add(new AccessGroupRole
+        {
+            AccessGroupId = opsGroup.Id,
+            RoleId = managerRole.Id
+        });
+        context.Set<AccessGroupRole>().Add(new AccessGroupRole
+        {
+            AccessGroupId = corporateGroup.Id,
+            RoleId = adminRole.Id
+        });
 
         var cardRequestSubmit = allPermissions.First(p => p.PermissionTypeId == permissionTypes["CardRequest"].Id && p.SubPermissionId == subPermissions["Submit"].Id);
         var cardRequestView = allPermissions.First(p => p.PermissionTypeId == permissionTypes["CardRequest"].Id && p.SubPermissionId == subPermissions["View"].Id);
-        foreach (var permission in new[] { cardRequestSubmit, cardRequestView })
+        var cardPrintingInvoke = allPermissions.First(p => p.PermissionTypeId == permissionTypes["CardPrinting"].Id && p.SubPermissionId == subPermissions["Invoke"].Id);
+        foreach (var permission in new[] { cardRequestSubmit, cardRequestView, cardPrintingInvoke })
         {
             context.Set<AccessGroupPermission>().Add(new AccessGroupPermission
             {
@@ -245,12 +303,25 @@ public static class SeedData
                 PermissionId = permission.Id
             });
         }
+        var accountCreate = allPermissions.First(p => p.PermissionTypeId == permissionTypes["Account"].Id && p.SubPermissionId == subPermissions["Create"].Id);
+        var accountView = allPermissions.First(p => p.PermissionTypeId == permissionTypes["Account"].Id && p.SubPermissionId == subPermissions["View"].Id);
+        var accountApprove = allPermissions.First(p => p.PermissionTypeId == permissionTypes["Account"].Id && p.SubPermissionId == subPermissions["Approve"].Id);
+        foreach (var permission in new[] { accountCreate, accountView, accountApprove })
+        {
+            context.Set<AccessGroupPermission>().Add(new AccessGroupPermission
+            {
+                AccessGroupId = corporateGroup.Id,
+                PermissionId = permission.Id
+            });
+        }
+
         context.Set<UserAccessGroup>().Add(new UserAccessGroup
         {
             AccessGroupId = opsGroup.Id,
             UserId = viewer.Id,
-            ScopeOrganizationUnitId = hq.Id,
+            ScopeOrganizationUnitId = units["coast"].Id,
             CascadeOrgStructure = true,
+            Status = AssignmentStatus.Active,
             CreatedAt = now,
             UpdatedAt = now,
             CreatedBy = systemUser,
@@ -258,13 +329,13 @@ public static class SeedData
             StartDate = now
         });
 
-        var cardPrintingInvoke = allPermissions.First(p => p.PermissionTypeId == permissionTypes["CardPrinting"].Id && p.SubPermissionId == subPermissions["Invoke"].Id);
         context.Set<UserPermission>().Add(new UserPermission
         {
             PermissionId = cardPrintingInvoke.Id,
             UserId = admin.Id,
-            ScopeOrganizationUnitId = mainBranch.Id,
-            CascadeOrgStructure = false,
+            ScopeOrganizationUnitId = units["ke"].Id,
+            CascadeOrgStructure = true,
+            Status = AssignmentStatus.Active,
             CreatedAt = now,
             UpdatedAt = now,
             CreatedBy = systemUser,
@@ -293,6 +364,26 @@ public static class SeedData
             context.Set<RolePermission>().Add(new RolePermission
             {
                 RoleId = viewerRole.Id,
+                PermissionId = permission.Id,
+                CreatedAt = now,
+                UpdatedAt = now,
+                CreatedBy = systemUser,
+                LastUpdatedBy = systemUser
+            });
+        }
+
+        var managerPermissions = new[]
+        {
+            ("CardRequest", "Create"), ("CardRequest", "View"), ("CardRequest", "Edit"), ("CardRequest", "Submit"), ("CardRequest", "Approve"),
+            ("Account", "View"), ("Account", "Create"), ("Account", "Edit"), ("Account", "Submit"),
+            ("CardPrinting", "View"), ("CardPrinting", "Invoke")
+        };
+        foreach (var (ptName, spName) in managerPermissions)
+        {
+            var permission = allPermissions.First(p => p.PermissionTypeId == permissionTypes[ptName].Id && p.SubPermissionId == subPermissions[spName].Id);
+            context.Set<RolePermission>().Add(new RolePermission
+            {
+                RoleId = managerRole.Id,
                 PermissionId = permission.Id,
                 CreatedAt = now,
                 UpdatedAt = now,

@@ -37,7 +37,7 @@ public class UsersController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateUserRequest request)
     {
-        var result = await _userService.CreateAsync(request.Username, request.Email, request.Password, request.FirstName, request.LastName);
+        var result = await _userService.CreateAsync(request.Username, request.Email, request.Password, request.FirstName, request.LastName, request.DomicileUnitId, request.StartDate, request.EndDate);
         if (!result.Succeeded) return this.ApiBadRequest(result, "User creation failed");
         return this.ApiOk("User created");
     }
@@ -51,10 +51,42 @@ public class UsersController : ControllerBase
     }
 
     [HttpDelete("{id}/roles/{roleName}")]
-    public async Task<IActionResult> RemoveRole(string id, string roleName)
+    public async Task<IActionResult> RemoveRole(string id, string roleName, [FromQuery] string? scopeOrganizationUnitId = null)
     {
-        var result = await _userService.RemoveRoleAsync(id, roleName);
+        var result = await _userService.RemoveRoleAsync(id, roleName, scopeOrganizationUnitId);
         if (!result.Succeeded) return this.ApiBadRequest(result, "Role removal failed");
         return this.ApiOk("Role removed");
+    }
+
+    [HttpPost("{id}/permissions")]
+    public async Task<IActionResult> AssignPermission(string id, [FromBody] AssignPermissionRequest request)
+    {
+        var result = await _userService.AssignPermissionAsync(id, request.PermissionId, request.ScopeOrganizationUnitId, request.CascadeOrgStructure, request.StartDate, request.EndDate);
+        if (!result.Succeeded) return this.ApiBadRequest(result, "Permission assignment failed");
+        return this.ApiOk("Permission assigned");
+    }
+
+    [HttpDelete("{id}/permissions/{permissionId}")]
+    public async Task<IActionResult> RemovePermission(string id, string permissionId, [FromQuery] string? scopeOrganizationUnitId = null)
+    {
+        var result = await _userService.RemovePermissionAsync(id, permissionId, scopeOrganizationUnitId);
+        if (!result.Succeeded) return this.ApiBadRequest(result, "Permission removal failed");
+        return this.ApiOk("Permission removed");
+    }
+
+    [HttpPost("{id}/access-groups")]
+    public async Task<IActionResult> AssignAccessGroup(string id, [FromBody] AssignAccessGroupRequest request)
+    {
+        var result = await _userService.AssignAccessGroupAsync(id, request.AccessGroupId, request.ScopeOrganizationUnitId, request.CascadeOrgStructure, request.StartDate, request.EndDate);
+        if (!result.Succeeded) return this.ApiBadRequest(result, "Access group assignment failed");
+        return this.ApiOk("Access group assigned");
+    }
+
+    [HttpDelete("{id}/access-groups/{accessGroupId}")]
+    public async Task<IActionResult> RemoveAccessGroup(string id, string accessGroupId, [FromQuery] string? scopeOrganizationUnitId = null)
+    {
+        var result = await _userService.RemoveAccessGroupAsync(id, accessGroupId, scopeOrganizationUnitId);
+        if (!result.Succeeded) return this.ApiBadRequest(result, "Access group removal failed");
+        return this.ApiOk("Access group removed");
     }
 }

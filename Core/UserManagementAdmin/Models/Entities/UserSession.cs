@@ -17,6 +17,8 @@ namespace UserManagementAdmin.Models.Entities
         public string? UserAgent { get; set; } = string.Empty;
         public string SecurityVersion { get; set; } = KeyGen.GenerateKey();
         public DateTime? LastAccessedAt { get; set; }
+        public DateTime? ExpiresAt { get; set; }
+        public int? IdleTimeoutMinutes { get; set; }
         public bool IsActive { get; set; } = true;
 
         public BshUser User { get; set; }

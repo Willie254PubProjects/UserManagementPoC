@@ -12,6 +12,8 @@ using UserManagementPoC.Shared.Security.Contracts;
 
 using UserManagementPoC.Shared.Security.Models;
 
+using Microsoft.AspNetCore.RateLimiting;
+
 namespace UserManagementPoC.Identity.Controllers;
 
 [ApiController]
@@ -36,6 +38,7 @@ public class AuthController : ControllerBase
         _userManagementClient = userManagementClient;
 
     }
+    [EnableRateLimiting("auth")]
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
@@ -51,10 +54,25 @@ public class AuthController : ControllerBase
     [HttpPost("refresh")]
     public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest request)
     {
-        var userId = await _refreshTokenService.ValidateAsync(request.RefreshToken);
-        if (userId == null)
+        var stored = await _refreshTokenService.ValidateAsync(request.RefreshToken);
+        if (stored == null)
         {
             return this.ApiUnauthorized("Invalid or expired refresh token");
+
+        }
+        var parts = stored.Split('|', 2);
+        var userId = parts[0];
+        var securityVersion = parts.Length > 1 ? parts[1] : string.Empty;
+        if (string.IsNullOrEmpty(securityVersion))
+        {
+            return this.ApiUnauthorized("Invalid or expired refresh token");
+
+        }
+        var session = await _userManagementClient.GetSessionAsync(securityVersion);
+        if (session == null || !session.IsActive
+            || !string.Equals(session.UserId, userId, StringComparison.OrdinalIgnoreCase))
+        {
+            return this.ApiUnauthorized("Session invalid, expired, or logged out");
 
         }
         var user = await _userManagementClient.GetUserByIdAsync(userId);
@@ -63,7 +81,7 @@ public class AuthController : ControllerBase
             return this.ApiUnauthorized("User not found");
 
         }
-        var tokenResponse = await _tokenGenerator.GenerateTokenAsync(user);
+        var tokenResponse = await _tokenGenerator.GenerateTokenAsync(user, securityVersion);
         return this.ApiOk(tokenResponse);
 
     }

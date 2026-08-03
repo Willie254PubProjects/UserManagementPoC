@@ -9,5 +9,6 @@ namespace UserManagementAdmin.Models.Entities
         public string Id { get; set; } = KeyGen.GenerateKey();
         public string Name { get; set; }
         public string Description { get; set; }
+        public bool IsSubsidiary { get; set; }
     }
 }

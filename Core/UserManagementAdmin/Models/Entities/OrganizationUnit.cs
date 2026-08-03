@@ -13,6 +13,7 @@ namespace UserManagementAdmin.Models.Entities
         public string Description { get; set; }
         public string UnitCode { get; set; }
         public string CountryCode { get; set; }
+        public OrganizationUnitStatus Status { get; set; } = OrganizationUnitStatus.Active;
         [ForeignKey(nameof(Type))] public string TypeId { get; set; }
         public OrganizationUnitType Type { get; set; }
         public string? ParentId { get; set; }

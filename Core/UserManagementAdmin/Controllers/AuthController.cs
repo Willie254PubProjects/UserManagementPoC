@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using UserManagementAdmin.Models.Entities;
 using UserManagementAdmin.Services;
@@ -51,6 +52,7 @@ public class AuthController : ControllerBase
     }
 
     [AllowAnonymous]
+    [EnableRateLimiting("auth")]
     [HttpPost("verify-credentials")]
     public async Task<IActionResult> VerifyCredentials([FromBody] VerifyCredentialsRequest request)
     {
@@ -62,7 +64,7 @@ public class AuthController : ControllerBase
         {
             Success = false, ErrorMessage = "Invalid credentials"
         });
-        var result = await _signInManager.CheckPasswordSignInAsync(user, password, false);
+        var result = await _signInManager.CheckPasswordSignInAsync(user, password, true);
         if (!result.Succeeded) return this.ApiOk(new VerifyCredentialsResponse
         {
             Success = false, ErrorMessage = "Invalid credentials"
@@ -118,7 +120,8 @@ public class AuthController : ControllerBase
         return this.ApiOk(new
         {
             session.UserId,
-            session.IsActive
+            session.IsActive,
+            PermissionVersion = session.User?.PermissionVersion ?? 0
         });
     }
 

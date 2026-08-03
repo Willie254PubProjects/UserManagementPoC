@@ -12,6 +12,7 @@ namespace UserManagementAdmin.Persistence.Configurations
             builder.HasKey(t => t.Id);
             builder.Property(t => t.Name).HasMaxLength(100).IsRequired();
             builder.Property(t => t.Description).HasMaxLength(500);
+            builder.Property(t => t.IsSubsidiary);
         }
     }
 }

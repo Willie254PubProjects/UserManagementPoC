@@ -5,6 +5,7 @@
 Before any planning or implementation, agents MUST first read:
 
 - [UserManagementPoC-Vision.md](./UserManagementPoC-Vision.md) — architectural vision, principles, project responsibilities, contracts, and end-goal.
+- [authorization-design.md](./authorization-design.md) — auth & authorization service design (tokens, sessions, attributes, evaluation pipeline, scope, caching).
 - [docs/project_plan.md](./docs/project_plan.md) — master phased plan with status tracking.
 - Individual phase plans under [docs/plans/](./docs/plans/) as relevant.
 

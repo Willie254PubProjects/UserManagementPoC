@@ -38,10 +38,20 @@ public class AuthorizationService : IAuthorizationEvaluator
         if (string.IsNullOrEmpty(tokenSecurityVersion))
             return AuthorizationResult.Denied("No security version in token");
 
+        var principalUserId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(principalUserId))
+            return AuthorizationResult.Denied("No user in token");
+
+        if (string.IsNullOrEmpty(context.UserId)
+            || !string.Equals(principalUserId, context.UserId, StringComparison.OrdinalIgnoreCase))
+            return AuthorizationResult.Denied("Cannot evaluate authorization for another user");
+
         var session = await _userManagementClient.GetSessionAsync(tokenSecurityVersion, cancellationToken);
 
         if (session == null || !session.IsActive)
             return AuthorizationResult.Denied("Session invalid, expired, or logged out");
+
+        var permissionVersion = session.PermissionVersion;
 
         if (!context.Roles.Any() && !context.Permissions.Any()
             && context.Workflow == null)
@@ -61,7 +71,7 @@ public class AuthorizationService : IAuthorizationEvaluator
 
         if (context.Roles.Any() || context.Workflow?.RequiredRoles.Any() == true)
         {
-            var userRoles = await GetCachedRolesAsync(context.UserId, tokenSecurityVersion, cancellationToken);
+            var userRoles = await GetCachedRolesAsync(context.UserId, tokenSecurityVersion, permissionVersion, cancellationToken);
             var requiredRoles = new List<string>();
             requiredRoles.AddRange(context.Roles);
             if (context.Workflow?.RequiredRoles.Any() == true)
@@ -81,7 +91,7 @@ public class AuthorizationService : IAuthorizationEvaluator
 
         if (context.Permissions.Any() || context.Workflow != null)
         {
-            var userPermissions = await GetCachedPermissionsAsync(context.UserId, tokenSecurityVersion, cancellationToken);
+            var userPermissions = await GetCachedPermissionsAsync(context.UserId, tokenSecurityVersion, permissionVersion, cancellationToken);
             var requiredPermissions = new List<string>();
             if (context.Permissions.Any())
             {
@@ -112,14 +122,14 @@ public class AuthorizationService : IAuthorizationEvaluator
 
     private static bool ScopeCovers(string[] scope, string? resourceBranch)
     {
-        if (string.IsNullOrEmpty(resourceBranch)) return true;
         if (scope == null || scope.Length == 0) return false;
+        if (string.IsNullOrEmpty(resourceBranch)) return false;
         return scope.Contains(resourceBranch, StringComparer.OrdinalIgnoreCase);
     }
 
-    private async Task<RoleDto[]> GetCachedRolesAsync(string userId, string securityVersion, CancellationToken cancellationToken)
+    private async Task<RoleDto[]> GetCachedRolesAsync(string userId, string securityVersion, int permissionVersion, CancellationToken cancellationToken)
     {
-        var cacheKey = $"roles:{userId}:{securityVersion}";
+        var cacheKey = $"roles:{userId}:{securityVersion}:{permissionVersion}";
         var cached = await _cache.GetAsync<RoleDto[]>(cacheKey, cancellationToken);
         if (cached != null) return cached;
 
@@ -128,9 +138,9 @@ public class AuthorizationService : IAuthorizationEvaluator
         return roles;
     }
 
-    private async Task<PermissionDto[]> GetCachedPermissionsAsync(string userId, string securityVersion, CancellationToken cancellationToken)
+    private async Task<PermissionDto[]> GetCachedPermissionsAsync(string userId, string securityVersion, int permissionVersion, CancellationToken cancellationToken)
     {
-        var cacheKey = $"permissions:{userId}:{securityVersion}";
+        var cacheKey = $"permissions:{userId}:{securityVersion}:{permissionVersion}";
         var cached = await _cache.GetAsync<PermissionDto[]>(cacheKey, cancellationToken);
         if (cached != null) return cached;
 

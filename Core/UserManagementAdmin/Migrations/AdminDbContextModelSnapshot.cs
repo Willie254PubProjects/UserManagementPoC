@@ -2,20 +2,17 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using UserManagementAdmin.Persistence;
 
 #nullable disable
 
-namespace UserManagementAdmin.Persistence.Migrations
+namespace UserManagementAdmin.Migrations
 {
     [DbContext(typeof(AdminDbContext))]
-    [Migration("20260802212249_AddRoleDescription")]
-    partial class AddRoleDescription
+    partial class AdminDbContextModelSnapshot : ModelSnapshot
     {
-        /// <inheritdoc />
-        protected override void BuildTargetModel(ModelBuilder modelBuilder)
+        protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.10");
@@ -305,6 +302,9 @@ namespace UserManagementAdmin.Persistence.Migrations
                     b.Property<string>("PasswordHash")
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("PermissionVersion")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("PhoneNumber")
                         .HasColumnType("TEXT");
 
@@ -381,6 +381,9 @@ namespace UserManagementAdmin.Persistence.Migrations
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("TypeId")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -421,6 +424,9 @@ namespace UserManagementAdmin.Persistence.Migrations
 
                     b.Property<DateTime?>("EndDate")
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsSubsidiary")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("LastUpdatedBy")
                         .IsRequired()
@@ -599,10 +605,11 @@ namespace UserManagementAdmin.Persistence.Migrations
 
             modelBuilder.Entity("UserManagementAdmin.Models.Entities.UserAccessGroup", b =>
                 {
-                    b.Property<string>("AccessGroupId")
+                    b.Property<string>("Id")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("UserId")
+                    b.Property<string>("AccessGroupId")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("CascadeOrgStructure")
@@ -629,10 +636,19 @@ namespace UserManagementAdmin.Persistence.Migrations
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("TEXT");
 
-                    b.HasKey("AccessGroupId", "UserId");
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccessGroupId");
 
                     b.HasIndex("ScopeOrganizationUnitId");
 
@@ -643,10 +659,7 @@ namespace UserManagementAdmin.Persistence.Migrations
 
             modelBuilder.Entity("UserManagementAdmin.Models.Entities.UserPermission", b =>
                 {
-                    b.Property<string>("PermissionId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("UserId")
+                    b.Property<string>("Id")
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("CascadeOrgStructure")
@@ -666,6 +679,10 @@ namespace UserManagementAdmin.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("PermissionId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("ScopeOrganizationUnitId")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -673,10 +690,19 @@ namespace UserManagementAdmin.Persistence.Migrations
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("TEXT");
 
-                    b.HasKey("PermissionId", "UserId");
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PermissionId");
 
                     b.HasIndex("ScopeOrganizationUnitId");
 
@@ -687,10 +713,7 @@ namespace UserManagementAdmin.Persistence.Migrations
 
             modelBuilder.Entity("UserManagementAdmin.Models.Entities.UserRole", b =>
                 {
-                    b.Property<string>("RoleId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("UserId")
+                    b.Property<string>("Id")
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("CascadeOrgStructure")
@@ -710,6 +733,10 @@ namespace UserManagementAdmin.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("RoleId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("ScopeOrganizationUnitId")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -717,10 +744,19 @@ namespace UserManagementAdmin.Persistence.Migrations
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("TEXT");
 
-                    b.HasKey("RoleId", "UserId");
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RoleId");
 
                     b.HasIndex("ScopeOrganizationUnitId");
 
@@ -740,6 +776,12 @@ namespace UserManagementAdmin.Persistence.Migrations
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("IdleTimeoutMinutes")
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("INTEGER");

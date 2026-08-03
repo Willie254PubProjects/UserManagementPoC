@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using UserManagementPoC.Shared.Authorization.Attributes;
+using UserManagementPoC.Shared.Authorization.Constants;
 using UserManagementPoC.Shared.Extensions;
 
 namespace UserManagementPoC.SampleIdentityConsumer.Controllers;
@@ -9,7 +10,7 @@ namespace UserManagementPoC.SampleIdentityConsumer.Controllers;
 public class SampleRoleController : ControllerBase
 {
     [HttpGet("any-of")]
-    [AuthorizeAnyRole("Administrator", "Manager")]
+    [AuthorizeAnyRole(BshRoles.Administrator, BshRoles.Manager)]
     public IActionResult AnyOf()
     {
         return this.ApiOk(new
@@ -20,7 +21,7 @@ public class SampleRoleController : ControllerBase
     }
 
     [HttpGet("all-of")]
-    [AuthorizeAllRoles("Administrator")]
+    [AuthorizeAllRoles(BshRoles.Administrator)]
     public IActionResult AllOf()
     {
         return this.ApiOk(new

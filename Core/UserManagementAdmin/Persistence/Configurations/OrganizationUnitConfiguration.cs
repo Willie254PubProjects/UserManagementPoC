@@ -14,6 +14,7 @@ namespace UserManagementAdmin.Persistence.Configurations
             builder.Property(ou => ou.Description).HasMaxLength(500);
             builder.Property(ou => ou.UnitCode).HasMaxLength(50).IsRequired();
             builder.Property(ou => ou.CountryCode).HasMaxLength(10).IsRequired();
+            builder.Property(ou => ou.Status);
             builder.HasOne(ou => ou.Type).WithMany().HasForeignKey(ou => ou.TypeId);
             builder.HasOne(ou => ou.Parent).WithMany(ou => ou.Children).HasForeignKey(ou => ou.ParentId).OnDelete(DeleteBehavior.Restrict);
         }

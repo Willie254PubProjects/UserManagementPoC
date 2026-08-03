@@ -44,7 +44,7 @@ public class SamplePermissionController : ControllerBase
     }
 
     [HttpGet("combined")]
-    [AuthorizeAnyRole("Administrator")]
+    [AuthorizeAnyRole(BshRoles.Administrator)]
     [AuthorizeAnyPermission(Permissions.CardPrinting.Create)]
     public IActionResult Combined()
     {

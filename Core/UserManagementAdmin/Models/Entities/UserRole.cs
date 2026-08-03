@@ -10,6 +10,8 @@ namespace UserManagementAdmin.Models.Entities
 {
     public class UserRole : BaseEntityWithExpiry
     {
+        [Key] public string Id { get; set; } = KeyGen.GenerateKey();
+        public AssignmentStatus Status { get; set; } = AssignmentStatus.Active;
         [ForeignKey(nameof(Role))] public string RoleId { get; set; }
         public BshRole Role { get; set; }
         [ForeignKey(nameof(User))] public string UserId { get; set; }

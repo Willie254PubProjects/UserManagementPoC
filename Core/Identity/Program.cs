@@ -2,6 +2,8 @@ using System.Text;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 
+using Microsoft.AspNetCore.RateLimiting;
+
 using Microsoft.IdentityModel.Tokens;
 
 using Scalar.AspNetCore;
@@ -33,6 +35,19 @@ var builder = WebApplication.CreateBuilder(args);
  builder.Services.AddAuthorization();
  builder.Services.AddControllers();
  builder.Services.AddOpenApi();
+ builder.Services.AddRateLimiter(options => {
+ options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+ options.AddFixedWindowLimiter("auth", o => {
+ o.Window = TimeSpan.FromMinutes(1);
+ o.PermitLimit = 10;
+ o.QueueLimit = 0;
+ });
+ options.OnRejected = async (context, token) => {
+ context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+ context.HttpContext.Response.ContentType = "application/json";
+ await context.HttpContext.Response.WriteAsJsonAsync(new { message = "Too many attempts. Please try again later." }, token);
+ };
+ });
  builder.Services.AddScoped<IKeyVaultService, ConfigKeyVaultService>();
  builder.Services.AddSharedSecurity();
  builder.Services.AddScoped<ITokenGenerator, TokenService>();
@@ -59,6 +74,7 @@ builder.Services.AddTransient<UserManagementTokenHandler>();
 }
 app.UseHttpsRedirection();
  app.UseAuthentication();
+ app.UseRateLimiter();
  app.UseAuthorization();
  app.MapControllers();
  app.Run();

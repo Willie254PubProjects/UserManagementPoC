@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using UserManagementAdmin.Models.Entities;
 using UserManagementAdmin.Services.Interfaces;
@@ -10,17 +11,23 @@ public class PermissionAssignmentService : IPermissionAssignmentService
 {
     private readonly IUnitOfWork _uow;
     private readonly IOrganizationUnitService _organizationUnitService;
-    public PermissionAssignmentService(IUnitOfWork uow, IOrganizationUnitService organizationUnitService)
+    private readonly IPermissionVersionService _permissionVersionService;
+    public PermissionAssignmentService(IUnitOfWork uow, IOrganizationUnitService organizationUnitService, IPermissionVersionService permissionVersionService)
     {
         _uow = uow;
         _organizationUnitService = organizationUnitService;
+        _permissionVersionService = permissionVersionService;
     }
 
     public async Task<RoleDto[]> GetUserRolesAsync(string userId)
     {
+        var now = DateTime.UtcNow;
         var assignments = await _uow.Repository<UserRole>().FindAsync(
-            ur => ur.UserId == userId,
-            q => q.Include(ur => ur.Role));
+            ur => ur.UserId == userId
+                && ur.Status == AssignmentStatus.Active
+                && ur.StartDate <= now
+                && (ur.EndDate == null || ur.EndDate >= now),
+            q => q.AsNoTracking().Include(ur => ur.Role));
 
         var roles = new Dictionary<string, List<IReadOnlySet<string>>>(StringComparer.OrdinalIgnoreCase);
         var descriptions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -48,11 +55,15 @@ public class PermissionAssignmentService : IPermissionAssignmentService
 
     public async Task<PermissionDto[]> GetUserPermissionsAsync(string userId)
     {
+        var now = DateTime.UtcNow;
         var permissions = new Dictionary<string, (string Description, List<IReadOnlySet<string>> Scopes)>(StringComparer.OrdinalIgnoreCase);
 
         var roleAssignments = await _uow.Repository<UserRole>().FindAsync(
-            ur => ur.UserId == userId,
-            q => q.Include(ur => ur.Role)
+            ur => ur.UserId == userId
+                && ur.Status == AssignmentStatus.Active
+                && ur.StartDate <= now
+                && (ur.EndDate == null || ur.EndDate >= now),
+            q => q.AsNoTracking().Include(ur => ur.Role)
                   .ThenInclude(r => r.Permissions)
                   .ThenInclude(rp => rp.Permission)
                   .ThenInclude(p => p.SubPermission)
@@ -70,8 +81,11 @@ public class PermissionAssignmentService : IPermissionAssignmentService
         }
 
         var accessGroupAssignments = await _uow.Repository<UserAccessGroup>().FindAsync(
-            uag => uag.UserId == userId,
-            q => q.Include(uag => uag.AccessGroup)
+            uag => uag.UserId == userId
+                && uag.Status == AssignmentStatus.Active
+                && uag.StartDate <= now
+                && (uag.EndDate == null || uag.EndDate >= now),
+            q => q.AsNoTracking().Include(uag => uag.AccessGroup)
                   .ThenInclude(ag => ag.Permissions)
                   .ThenInclude(agp => agp.Permission)
                   .ThenInclude(p => p.SubPermission)
@@ -89,8 +103,11 @@ public class PermissionAssignmentService : IPermissionAssignmentService
         }
 
         var directAssignments = await _uow.Repository<UserPermission>().FindAsync(
-            up => up.UserId == userId,
-            q => q.Include(up => up.Permission)
+            up => up.UserId == userId
+                && up.Status == AssignmentStatus.Active
+                && up.StartDate <= now
+                && (up.EndDate == null || up.EndDate >= now),
+            q => q.AsNoTracking().Include(up => up.Permission)
                   .ThenInclude(p => p.SubPermission)
                   .Include(up => up.Permission)
                   .ThenInclude(p => p.Type));
@@ -119,6 +136,7 @@ public class PermissionAssignmentService : IPermissionAssignmentService
                 PermissionId = permissionId
             });
             await _uow.SaveChangesAsync();
+            await _permissionVersionService.BumpRoleUsersAsync(roleId);
         }
     }
     public async Task RemovePermissionFromRoleAsync(string roleId, string permissionId)
@@ -128,6 +146,7 @@ public class PermissionAssignmentService : IPermissionAssignmentService
         {
             _uow.Repository<RolePermission>().Delete(rp);
             await _uow.SaveChangesAsync();
+            await _permissionVersionService.BumpRoleUsersAsync(roleId);
         }
     }
 

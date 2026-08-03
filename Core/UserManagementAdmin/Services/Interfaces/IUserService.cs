@@ -8,7 +8,11 @@ public interface IUserService
 {
     Task<PagedResponse<UserInfo>> GetAllAsync(int page = 1, int pageSize = 20);
     Task<UserInfo?> GetByIdAsync(string id);
-    Task<IdentityResult> CreateAsync(string username, string email, string password, string firstName, string lastName);
+    Task<IdentityResult> CreateAsync(string username, string email, string password, string firstName, string lastName, string domicileUnitId, DateTime? startDate = null, DateTime? endDate = null);
     Task<IdentityResult> AssignRoleAsync(string userId, string roleName, string scopeOrganizationUnitId, bool cascadeOrgStructure);
-    Task<IdentityResult> RemoveRoleAsync(string userId, string roleName);
+    Task<IdentityResult> RemoveRoleAsync(string userId, string roleName, string? scopeOrganizationUnitId = null);
+    Task<IdentityResult> AssignPermissionAsync(string userId, string permissionId, string scopeOrganizationUnitId, bool cascadeOrgStructure, DateTime? startDate = null, DateTime? endDate = null);
+    Task<IdentityResult> RemovePermissionAsync(string userId, string permissionId, string? scopeOrganizationUnitId = null);
+    Task<IdentityResult> AssignAccessGroupAsync(string userId, string accessGroupId, string scopeOrganizationUnitId, bool cascadeOrgStructure, DateTime? startDate = null, DateTime? endDate = null);
+    Task<IdentityResult> RemoveAccessGroupAsync(string userId, string accessGroupId, string? scopeOrganizationUnitId = null);
 }

@@ -35,8 +35,9 @@ The central objectives are:
 -   **Attribute-driven** -- endpoints declare requirements declaratively
     through a family of authorization attributes.
 -   **Session-scoped caching** -- permission/role caches are keyed to a
-    user's `SecurityVersion`, enabling automatic invalidation on logout
-    or forced session expiry.
+    user's `SecurityVersion` and `PermissionVersion`, enabling automatic
+    invalidation on logout/forced session expiry and on role/permission
+    assignment changes.
 
 ------------------------------------------------------------------------
 
@@ -93,6 +94,8 @@ the Identity service or the consuming application.
 | `ITokenGenerator` | Generate JWT + refresh token | `TokenService` (Identity) | Shared.Security |
 | `ITokenValidator` | Validate a JWT and return user info | `TokenService` (Identity) | Shared.Security |
 | `IUserAuthenticator` | Authenticate credentials and issue tokens | `AuthenticationService` (Identity) | Shared.Security |
+| `IEncryptionService` | Encrypt/decrypt credentials during login | `AesEncryptionService` (Shared.Security) | Shared.Security |
+| `IKeyVaultService` | Provide signing/encryption secrets from configuration | `ConfigKeyVaultService` (Identity) | Shared.Security |
 | `ICurrentUser` | Access current user identity (Id, UserName, DisplayName, Email, BankId, BranchId, CountryCode) from JWT claims | `CurrentUser` (SDK internal) | Shared.Shared |
 | `ICacheService` | Generic caching abstraction | `MemoryCacheService` (Identity) | Shared.Shared |
 | `IUserManagementApiClient` | HTTP client to UserManagementAdmin | `UserManagementApiClient` (Identity) | Core.Identity |
@@ -142,12 +145,18 @@ hardcodes the evaluation logic.
     // Infrastructure
     services.AddHttpContextAccessor();
     services.AddScoped<ICurrentUser, CurrentUser>();
+    services.AddScoped<IResourceScopeResolver, NoOpResourceScopeResolver>();
     services.AddScoped<IAuthorizationHandler, AuthorizationEvaluationHandler>();
     services.AddSingleton<IAuthorizationPolicyProvider, AuthorizationPolicyProvider>();
 
     return services;
 }
 ```
+
+The SDK registers `IResourceScopeResolver` to the default
+`NoOpResourceScopeResolver`, so scope resolution always has a fallback.
+A consumer that needs explicit resource scope simply registers its own
+implementation, which replaces the no-op through DI.
 
 A client application therefore needs only:
 
@@ -158,7 +167,8 @@ builder.Services.AddIdentityAuthorization(options =>
     options.Authority = "https://identity.company.com";
     options.ServiceName = "identity";
 });
-builder.Services.AddScoped<IWorkflowContextResolver, MyResolver>();
+builder.Services.AddScoped<IWorkflowContextResolver, MyWorkflowResolver>();
+builder.Services.AddScoped<IResourceScopeResolver, MyScopeResolver>();
 ```
 
 ------------------------------------------------------------------------
@@ -238,9 +248,17 @@ public interface ITokenValidator
 ```
 
 `TokenService` (the default implementation) signs using
-`HMACSHA256` with a symmetric key from configuration. Token lifetime is
-configurable (default 60 minutes). Refresh tokens are stored in cache
-with a 7-day TTL and single-use semantics.
+`HMACSHA256` with a symmetric key from configuration. The access token
+lifetime is configurable (default **15 minutes**). Refresh tokens are
+stored in cache with a **30-minute** TTL and single-use semantics
+(deleted on validation).
+
+The server-side session mirrors the refresh window. `UserSession` is
+created with `ExpiresAt` set to the same **30-minute** default, and the
+session lookup verifies `IsActive`, `ExpiresAt`, and the idle timeout.
+The refresh flow re-validates the session against
+UserManagementAdmin before issuing a new token, so an expired or
+logged-out session rejects both evaluation and refresh.
 
 ------------------------------------------------------------------------
 
@@ -318,7 +336,7 @@ This means:
 
 The client application never sees the permission data. It calls the
 Identity service's `/api/authorization/evaluate` endpoint and receives
-only `AuthorizationResult { IsAllowed }`.
+only an `AuthorizationResult { IsAllowed, Reason }`.
 
 ------------------------------------------------------------------------
 
@@ -390,30 +408,88 @@ public class AuthRequirementAttribute : AuthorizeAttribute
 }
 ```
 
-### 6.4 Concrete Attributes
+### 6.4 Shared Permission & Role Constants
+
+To keep attributes free of magic strings, well-known permission and
+role names live as constants in `Shared.Authorization.Constants`. Both
+are organized into subfolders so each domain area stays in its own file
+instead of growing one file for everything.
+
+**Permissions** -- `Permissions` is a `static partial class` split
+across `Constants/Permissions/`, one file per domain area. Each file
+nests a static class holding that area's
+`Create`/`View`/`Edit`/`Approve`/`Submit`/`Invoke` constants. Usage
+remains clear and readable: `Permissions.CardPrinting.Create`.
+
+```
+Constants/Permissions/
+├── CardPrinting.cs   → partial Permissions { static class CardPrinting { ... } }
+├── Account.cs        → partial Permissions { static class Account { ... } }
+└── CardRequest.cs    → partial Permissions { static class CardRequest { ... } }
+```
+
+``` csharp
+// Constants/Permissions/CardRequest.cs
+namespace UserManagementPoC.Shared.Authorization.Constants;
+
+public static partial class Permissions
+{
+    public static class CardRequest
+    {
+        public const string Create = "CardRequest.Create";
+        public const string View   = "CardRequest.View";
+        // ...
+    }
+}
+```
+
+**Roles (BshRoles)** -- the role names used by `[AuthorizeAnyRole]` /
+`[AuthorizeAllRoles]` live in `Constants/Roles/BshRoles.cs`:
+
+``` csharp
+// Constants/Roles/BshRoles.cs
+namespace UserManagementPoC.Shared.Authorization.Constants;
+
+public static class BshRoles
+{
+    public const string Administrator = "Administrator";
+    public const string Manager       = "Manager";
+    public const string Viewer        = "Viewer";
+}
+```
+
+Attributes consume these constants instead of magic strings. Adding a
+new permission area or role is a one-file addition to the relevant
+subfolder.
+
+### 6.5 Concrete Attributes
 
 | Attribute | PolicyType | Operator | String Format |
 |---|---|---|---|
-| `[AuthorizeAnyRole("Admin", "Manager")]` | Role | Or | `Role|Or|Admin,Manager` |
-| `[AuthorizeAllRoles("Admin", "Manager")]` | Role | And | `Role|And|Admin,Manager` |
-| `[AuthorizeAnyPermission("CardPrinting.Create")]` | Permission | Or | `Permission|Or|CardPrinting.Create` |
-| `[AuthorizeAllPermissions("A", "B")]` | Permission | And | `Permission|And|A,B` |
+| `[AuthorizeAnyRole(BshRoles.Administrator, BshRoles.Manager)]` | Role | Or | `Role\|Or\|Administrator,Manager` |
+| `[AuthorizeAllRoles(BshRoles.Administrator)]` | Role | And | `Role\|And\|Administrator` |
+| `[AuthorizeAnyPermission(Permissions.CardPrinting.Create)]` | Permission | Or | `Permission\|Or\|CardPrinting.Create` |
+| `[AuthorizeAllPermissions(Permissions.Account.View, Permissions.CardRequest.View)]` | Permission | And | `Permission\|And\|Account.View,CardRequest.View` |
 
 ``` csharp
 // User must hold at least one of these permissions
-[AuthorizeAnyPermission("CardPrinting.Create", "CardPrinting.Approve")]
+[AuthorizeAnyPermission(Permissions.CardPrinting.Create, Permissions.CardPrinting.Approve)]
 public IActionResult CreateCardPrinting() { ... }
 
 // User must hold all specified roles
-[AuthorizeAllRoles("Administrator")]
+[AuthorizeAllRoles(BshRoles.Administrator)]
 public IActionResult AdminOnly() { ... }
 ```
+
+All attribute values reference the shared constants
+(`Permissions.*` for permissions, `BshRoles.*` for roles) defined in
+§6.4 -- never hand-typed strings.
 
 Multiple attributes on the same endpoint combine with **AND**
 semantics -- each attribute produces its own `IdentityAuthorizationRequirement`,
 and ASP.NET Core requires all handlers to succeed.
 
-### 6.5 Policy Name Encoding
+### 6.6 Policy Name Encoding
 
 The `AuthPolicyName` helper converts structured data into a flat string
 that survives ASP.NET Core's policy-name-based architecture:
@@ -477,6 +553,7 @@ The `AuthorizationPolicyProvider` reverses this:
 │   ─ Validates session via UserManagementApiClient                │
 │   ─ Fetches roles (cached)                                       │
 │   ─ Fetches permissions (cached)                                  │
+│   ─ Enforces resource scope (bank guard + branch match)          │
 │   ─ Evaluates required vs granted                                │
 │   ─ Returns AuthorizationResult                                  │
 │       │                                                          │
@@ -493,6 +570,10 @@ The `AuthorizationPolicyProvider` reverses this:
 │   └── POST /api/auth/sessions/{securityVersion}/invalidate       │
 └──────────────────────────────────────────────────────────────────┘
 ```
+
+The box shows the authorization subset of the admin service. It also
+exposes the auth endpoints used during login (`POST /api/auth/verify-credentials`,
+`POST /api/auth/sessions`, `GET /api/auth/users/{id}`) -- see §10.1.
 
 ### 7.2 Handler: Two Branches
 
@@ -567,16 +648,26 @@ AuthorizationService.EvaluateAsync(context)
 ├── Extract security_version from JWT claims
 │
 ├── Validate session: GET /api/auth/sessions/{securityVersion}
-│   └── If inactive → DENIED
+│   └── If inactive or expired (ExpiresAt / idle timeout) → DENIED
+│
+├── Scope guard (bank)
+│   ├── If context.BankId and the user's bank_id claim are both set
+│   │   and differ → resource is outside the user's subsidiary → DENIED
 │
 ├── Role evaluation (if roles required)
 │   ├── GET /api/auth/users/{userId}/roles (cached)
 │   ├── Match required roles against granted roles
+│   │   └── A role counts only if its Scope contains the resource
+│   │       BranchId (fail-closed: an empty resource BranchId or an
+│   │       empty grant Scope fails the scope check → DENIED)
 │   └── Operator: Or (any match) or And (all match)
 │
 ├── Permission evaluation (if permissions required)
 │   ├── GET /api/auth/users/{userId}/permissions (cached)
 │   ├── Match required permissions against granted permissions
+│   │   └── A permission counts only if its Scope contains the
+│   │       resource BranchId (fail-closed: an empty resource BranchId
+│   │       or an empty grant Scope fails the scope check → DENIED)
 │   └── Operator: Or for workflow-sourced, configurable for attributes
 │
 └── ALLOW if all checks pass, DENY otherwise
@@ -590,7 +681,8 @@ the required permissions grants access.
 consumed by the authorization engine to enforce organizational scope:
 the requesting user's assigned roles/permissions must align with the
 resolved scope (a specific subsidiary/branch) for the call to be
-allowed. They are resolved by `IResourceScopeResolver`.
+allowed. The handler resolves them with the precedence `Workflow` →
+`IResourceScopeResolver` → current-user claims (see §7.2).
 
 ### 7.4 Resource Scope Enforcement and Flexibility
 
@@ -653,8 +745,8 @@ strategy end to end.
            │              │  │ Cache        │
            │ key:         │  │              │
            │ roles:{uid}: │  │ key:         │
-           │   {sv}       │  │ perms:{uid}: │
-           │ TTL: 3 min   │  │   {sv}       │
+           │   {sv}:{pv}  │  │ perms:{uid}: │
+           │ TTL: 3 min   │  │   {sv}:{pv}  │
            │              │  │ TTL: 3 min   │
            └──────────────┘  └──────────────┘
                            │
@@ -672,18 +764,26 @@ strategy end to end.
 
 ### 8.2 Cache Key Design
 
-Each cache key incorporates the user's `SecurityVersion`:
+Each cache key incorporates the user's `SecurityVersion` **and**
+`PermissionVersion` (the latter returned with the session validation
+response):
 
 ```
-roles:{userId}:{securityVersion}
-permissions:{userId}:{securityVersion}
+roles:{userId}:{securityVersion}:{permissionVersion}
+permissions:{userId}:{securityVersion}:{permissionVersion}
 ```
+
+`PermissionVersion` is a second, independent invalidation lever: it is
+bumped whenever a user's role or permission assignments change
+(`PermissionVersionService`), so stale grants are never served even
+without a logout. `SecurityVersion` handles logout/forced session
+expiry; `PermissionVersion` handles assignment changes.
 
 Example:
 
 ```
-roles:usr_abc123:3f8a2b1c-...    → RoleDto[] { { Name = "Administrator", Id = "r1", Scopes = [...] } }
-permissions:usr_abc123:3f8a2b1c-... → PermissionDto[] { { Name = "CardPrinting.Create", Id = "p1", ... } }
+roles:usr_abc123:3f8a2b1c-...:12    → RoleDto[] { { Code = "Administrator", Description = "Full system administrator", Scope = ["KE", "001"] } }
+permissions:usr_abc123:3f8a2b1c-...:12 → PermissionDto[] { { Code = "CardPrinting.Create", Description = "Create CardPrinting", Scope = ["KE", "001"] } }
 ```
 
 ### 8.3 Cache Duration
@@ -691,7 +791,7 @@ permissions:usr_abc123:3f8a2b1c-... → PermissionDto[] { { Name = "CardPrinting
 -   **Default TTL:** 3 minutes (`TimeSpan.FromMinutes(3)`)
 -   **Cache implementation:** `IMemoryCache` via `MemoryCacheService`
     (singleton, in-process)
--   **Refresh tokens:** 7 days, single-use (deleted on validation)
+-   **Refresh tokens:** 30 minutes, single-use (deleted on validation)
 
 ### 8.4 Automatic Invalidation on Logout
 
@@ -701,7 +801,7 @@ The `SecurityVersion` is the linchpin of cache invalidation:
 Login:
   → CreateSession(session with SecurityVersion = "A")
   → JWT carries security_version = "A"
-  → Cache keys: roles:usr:A, permissions:usr:A
+  → Cache keys: roles:usr:A:0, permissions:usr:A:0
 
 Logout:
   → InvalidateSession("A")
@@ -711,8 +811,13 @@ Logout:
   → Cache entries for version "A" expire naturally (3 min TTL)
   → New login creates cache under version "B"
 
-No explicit cache eviction is needed. The version change makes
-the old cache keys unreachable.
+Assignment change (no logout):
+  → PermissionVersion bumps 0 → 1
+  → Cache keys roles:usr:A:1 / permissions:usr:A:1 are rebuilt on next request
+  → Old keys under PermissionVersion 0 expire naturally
+
+No explicit cache eviction is needed. A version change makes the old
+cache keys unreachable.
 ```
 
 ### 8.5 ICacheService Abstraction
@@ -763,6 +868,8 @@ This registers:
 -   `IAuthorizationPolicyProvider` → custom policy decoder
 -   `IAuthorizationHandler` → evaluation handler
 -   `ICurrentUser` → user context from HTTP
+-   `IResourceScopeResolver` → `NoOpResourceScopeResolver` (default;
+    overridden by the app when explicit resource scope is needed)
 -   `BearerTokenHandler` → automatic token forwarding
 
 ### Step 3: Implement IWorkflowContextResolver
@@ -834,12 +941,12 @@ public class CardPrintingController : ControllerBase
     { /* business logic only */ }
 
     [HttpGet("{id}")]
-    [AuthorizeAnyPermission("CardPrinting.View")]
+    [AuthorizeAnyPermission(Permissions.CardPrinting.View)]
     public async Task<IActionResult> GetCardPrinting(string id)
     { /* business logic only */ }
 
     [HttpPost("{id}/approve")]
-    [AuthorizeAllRoles("CardPrinting Supervisor")]
+    [AuthorizeAllRoles(BshRoles.Manager)]
     [AuthorizeWorkflow]
     public async Task<IActionResult> ApproveCardPrinting(string id)
     { /* business logic only */ }
@@ -1024,8 +1131,9 @@ freshly fetched and cached under the new key.
     `api/authorization/*`) even though they run in the same process.
 
 2.  **Defend interfaces, not implementations.** Every capability is a
-    contract. The SDK ships zero implementation logic. Consumers,
-    tests, and the Identity service itself all depend on interfaces.
+    contract. The SDK ships no evaluation logic -- only client plumbing
+    (HTTP client, handler, policy provider). Consumers, tests, and the
+    Identity service itself all depend on interfaces.
 
 3.  **Keep tokens lightweight.** JWTs carry identity claims and a
     session version only. No roles, no permissions, no workflow data.

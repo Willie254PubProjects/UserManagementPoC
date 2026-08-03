@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace UserManagementAdmin.Persistence.Migrations
+namespace UserManagementAdmin.Migrations
 {
     /// <inheritdoc />
     public partial class InitialCreate : Migration
@@ -41,6 +41,7 @@ namespace UserManagementAdmin.Persistence.Migrations
                     LastUpdatedBy = table.Column<string>(type: "TEXT", nullable: false),
                     StartDate = table.Column<DateTime>(type: "TEXT", nullable: false),
                     EndDate = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    Description = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false),
                     Name = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     NormalizedName = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     ConcurrencyStamp = table.Column<string>(type: "TEXT", nullable: true)
@@ -57,6 +58,7 @@ namespace UserManagementAdmin.Persistence.Migrations
                     Id = table.Column<string>(type: "TEXT", nullable: false),
                     Name = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
                     Description = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false),
+                    IsSubsidiary = table.Column<bool>(type: "INTEGER", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
                     CreatedBy = table.Column<string>(type: "TEXT", nullable: false),
@@ -159,6 +161,9 @@ namespace UserManagementAdmin.Persistence.Migrations
                     Id = table.Column<string>(type: "TEXT", nullable: false),
                     Name = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
                     Description = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false),
+                    UnitCode = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
+                    CountryCode = table.Column<string>(type: "TEXT", maxLength: 10, nullable: false),
+                    Status = table.Column<int>(type: "INTEGER", nullable: false),
                     TypeId = table.Column<string>(type: "TEXT", nullable: false),
                     ParentId = table.Column<string>(type: "TEXT", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
@@ -398,6 +403,8 @@ namespace UserManagementAdmin.Persistence.Migrations
                 name: "UserAccessGroups",
                 columns: table => new
                 {
+                    Id = table.Column<string>(type: "TEXT", nullable: false),
+                    Status = table.Column<int>(type: "INTEGER", nullable: false),
                     AccessGroupId = table.Column<string>(type: "TEXT", nullable: false),
                     UserId = table.Column<string>(type: "TEXT", nullable: false),
                     ScopeOrganizationUnitId = table.Column<string>(type: "TEXT", nullable: false),
@@ -411,7 +418,7 @@ namespace UserManagementAdmin.Persistence.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_UserAccessGroups", x => new { x.AccessGroupId, x.UserId });
+                    table.PrimaryKey("PK_UserAccessGroups", x => x.Id);
                     table.ForeignKey(
                         name: "FK_UserAccessGroups_AccessGroups_AccessGroupId",
                         column: x => x.AccessGroupId,
@@ -436,6 +443,8 @@ namespace UserManagementAdmin.Persistence.Migrations
                 name: "UserPermissions",
                 columns: table => new
                 {
+                    Id = table.Column<string>(type: "TEXT", nullable: false),
+                    Status = table.Column<int>(type: "INTEGER", nullable: false),
                     PermissionId = table.Column<string>(type: "TEXT", nullable: false),
                     UserId = table.Column<string>(type: "TEXT", nullable: false),
                     ScopeOrganizationUnitId = table.Column<string>(type: "TEXT", nullable: false),
@@ -449,7 +458,7 @@ namespace UserManagementAdmin.Persistence.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_UserPermissions", x => new { x.PermissionId, x.UserId });
+                    table.PrimaryKey("PK_UserPermissions", x => x.Id);
                     table.ForeignKey(
                         name: "FK_UserPermissions_AspNetUsers_UserId",
                         column: x => x.UserId,
@@ -474,6 +483,8 @@ namespace UserManagementAdmin.Persistence.Migrations
                 name: "UserRoles",
                 columns: table => new
                 {
+                    Id = table.Column<string>(type: "TEXT", nullable: false),
+                    Status = table.Column<int>(type: "INTEGER", nullable: false),
                     RoleId = table.Column<string>(type: "TEXT", nullable: false),
                     UserId = table.Column<string>(type: "TEXT", nullable: false),
                     ScopeOrganizationUnitId = table.Column<string>(type: "TEXT", nullable: false),
@@ -487,7 +498,7 @@ namespace UserManagementAdmin.Persistence.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_UserRoles", x => new { x.RoleId, x.UserId });
+                    table.PrimaryKey("PK_UserRoles", x => x.Id);
                     table.ForeignKey(
                         name: "FK_UserRoles_AspNetRoles_RoleId",
                         column: x => x.RoleId,
@@ -613,6 +624,11 @@ namespace UserManagementAdmin.Persistence.Migrations
                 column: "PermissionId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_UserAccessGroups_AccessGroupId",
+                table: "UserAccessGroups",
+                column: "AccessGroupId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_UserAccessGroups_ScopeOrganizationUnitId",
                 table: "UserAccessGroups",
                 column: "ScopeOrganizationUnitId");
@@ -623,6 +639,11 @@ namespace UserManagementAdmin.Persistence.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_UserPermissions_PermissionId",
+                table: "UserPermissions",
+                column: "PermissionId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_UserPermissions_ScopeOrganizationUnitId",
                 table: "UserPermissions",
                 column: "ScopeOrganizationUnitId");
@@ -631,6 +652,11 @@ namespace UserManagementAdmin.Persistence.Migrations
                 name: "IX_UserPermissions_UserId",
                 table: "UserPermissions",
                 column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserRoles_RoleId",
+                table: "UserRoles",
+                column: "RoleId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_UserRoles_ScopeOrganizationUnitId",

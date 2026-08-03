@@ -18,6 +18,7 @@ namespace UserManagementAdmin.Models.Entities
         public DateTime? EndDate { get; set; }
         [ForeignKey(nameof(DomicileUnit))] public string DomicileUnitId { get; set; }
         public OrganizationUnit DomicileUnit { get; set; }
+        public int PermissionVersion { get; set; }
         public IEnumerable<UserRole> Roles { get; set; } = new List<UserRole>();
 
     }

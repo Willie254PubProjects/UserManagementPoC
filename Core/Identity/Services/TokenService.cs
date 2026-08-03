@@ -31,7 +31,7 @@ public class TokenService : ITokenGenerator, ITokenValidator
         var claims = _claimsFactory.Create(user, securityVersion);
         var jwtSettings = _configuration.GetSection("JwtSettings");
         var secretKey = Encoding.UTF8.GetBytes(jwtSettings["SecretKey"]!);
-        var expirationMinutes = int.Parse(jwtSettings["ExpirationMinutes"] ?? "60");
+        var expirationMinutes = int.Parse(jwtSettings["ExpirationMinutes"] ?? "15");
         var expiresAt = DateTime.UtcNow.AddMinutes(expirationMinutes);
         var tokenDescriptor = new SecurityTokenDescriptor
         {
@@ -44,7 +44,7 @@ public class TokenService : ITokenGenerator, ITokenValidator
         var tokenHandler = new JwtSecurityTokenHandler();
         var token = tokenHandler.CreateToken(tokenDescriptor);
         var accessToken = tokenHandler.WriteToken(token);
-        var refreshToken = await _refreshTokenService.GenerateAsync(user.Id);
+        var refreshToken = await _refreshTokenService.GenerateAsync(user.Id, securityVersion);
         return new TokenResponse
         {
             AccessToken = accessToken,

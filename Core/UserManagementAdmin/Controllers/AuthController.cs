@@ -76,6 +76,7 @@ public class AuthController : ControllerBase
         });
     }
 
+    [AllowAnonymous]
     [HttpGet("users/{id}")]
     public async Task<IActionResult> GetUserById(string id)
     {
@@ -112,6 +113,7 @@ public class AuthController : ControllerBase
         return this.ApiOk(permissions);
     }
 
+    [AllowAnonymous]
     [HttpGet("sessions/{securityVersion}")]
     public async Task<IActionResult> GetSession(string securityVersion)
     {

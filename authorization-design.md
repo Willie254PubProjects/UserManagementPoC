@@ -260,6 +260,18 @@ The refresh flow re-validates the session against
 UserManagementAdmin before issuing a new token, so an expired or
 logged-out session rejects both evaluation and refresh.
 
+> **PoC caveat:** because a refresh arrives when the access token may
+> already be expired (or absent), the UserManagementAdmin endpoints the
+> Identity service calls during refresh --
+> `GET /api/auth/sessions/{securityVersion}` and
+> `GET /api/auth/users/{id}` -- are annotated `[AllowAnonymous]`. This is
+> acceptable only for this PoC: both lookups are keyed by an unguessable
+> opaque GUID, and `IsActive`/`ExpiresAt`/idle-timeout checks are still
+> enforced server-side. **Production must replace this with
+> service-to-service authentication** (e.g. machine/client-credentials
+> tokens or mTLS) so Identity authenticates to UserManagementAdmin as a
+> service rather than exposing these queries anonymously.
+
 ------------------------------------------------------------------------
 
 ## 5. Lightweight Token Strategy

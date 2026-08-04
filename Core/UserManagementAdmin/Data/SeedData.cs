@@ -126,7 +126,7 @@ public static class SeedData
             return unit;
         }
 
-        AddUnit("group", "Equity Group Holdings", "Group holding company root", "Group", "0001", "KE");
+        AddUnit("group", "Demo Group Holdings", "Group holding company root", "Group", "0001", "KE");
         AddUnit("ke", "KE Subsidiary", "Kenya subsidiary", "Subsidiary", "KE", "KE", "group");
         AddUnit("ke-ops", "Kenya Operations", "Kenya operations department", "Department", "0002", "KE", "ke");
         AddUnit("ke-tech", "Kenya Technology", "Kenya technology department", "Department", "0003", "KE", "ke");

@@ -17,3 +17,6 @@ UserManagementPoC-Vision.md
 
 # Agent instructions (local)
 AGENTS.md
+
+# Local databases
+Core/UserManagementAdmin/Persistence/db/

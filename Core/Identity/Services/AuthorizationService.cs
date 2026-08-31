@@ -20,6 +20,7 @@ public class AuthorizationService : IAuthorizationEvaluator
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ICacheService _cache;
     private static readonly TimeSpan PermissionCacheTtl = TimeSpan.FromMinutes(3);
+    private static readonly TimeSpan OrgCacheTtl = TimeSpan.FromMinutes(5);
 
     public AuthorizationService(IUserManagementApiClient userManagementClient, IHttpContextAccessor httpContextAccessor, ICacheService cache)
     {
@@ -59,14 +60,24 @@ public class AuthorizationService : IAuthorizationEvaluator
             return AuthorizationResult.Denied("No authorization requirements specified");
         }
 
-        var resourceBank = context.BankId;
         var resourceBranch = context.BranchId;
-        var userBank = httpContext.User.FindFirstValue("bank_id");
 
-        if (!string.IsNullOrEmpty(resourceBank) && !string.IsNullOrEmpty(userBank)
-            && !string.Equals(resourceBank, userBank, StringComparison.OrdinalIgnoreCase))
+        if (!string.IsNullOrEmpty(resourceBranch))
         {
-            return AuthorizationResult.Denied("Resource is outside the user's subsidiary");
+            var domicileScope = await GetCachedDomicileScopeAsync(context.UserId, cancellationToken);
+            if (domicileScope == null || !domicileScope.Contains(resourceBranch, StringComparer.OrdinalIgnoreCase))
+            {
+                return AuthorizationResult.Denied("Resource is outside the user's domicile");
+            }
+
+            if (!string.IsNullOrEmpty(context.BankId))
+            {
+                var bankScope = await GetCachedResolvedOrgScopeAsync(context.BankId, cancellationToken);
+                if (bankScope == null || !bankScope.Contains(resourceBranch, StringComparer.OrdinalIgnoreCase))
+                {
+                    return AuthorizationResult.Denied("Resource branch is not under the supplied bank");
+                }
+            }
         }
 
         if (context.Roles.Any() || context.Workflow?.RequiredRoles.Any() == true)
@@ -147,5 +158,27 @@ public class AuthorizationService : IAuthorizationEvaluator
         var permissions = await _userManagementClient.GetUserPermissionsAsync(userId, cancellationToken);
         await _cache.SetAsync(cacheKey, permissions, PermissionCacheTtl, cancellationToken);
         return permissions;
+    }
+
+    private async Task<IReadOnlySet<string>?> GetCachedDomicileScopeAsync(string userId, CancellationToken cancellationToken)
+    {
+        var cacheKey = $"domicile:{userId}";
+        var cached = await _cache.GetAsync<string[]>(cacheKey, cancellationToken);
+        if (cached != null) return cached.ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var scope = await _userManagementClient.GetDomicileScopeAsync(userId, cancellationToken);
+        if (scope != null) await _cache.SetAsync(cacheKey, scope, OrgCacheTtl, cancellationToken);
+        return scope?.ToHashSet(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private async Task<IReadOnlySet<string>?> GetCachedResolvedOrgScopeAsync(string value, CancellationToken cancellationToken)
+    {
+        var cacheKey = $"orgresolve:{value.ToLowerInvariant()}";
+        var cached = await _cache.GetAsync<string[]>(cacheKey, cancellationToken);
+        if (cached != null) return cached.ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var scope = await _userManagementClient.ResolveOrgUnitScopeAsync(value, cancellationToken);
+        if (scope != null) await _cache.SetAsync(cacheKey, scope, OrgCacheTtl, cancellationToken);
+        return scope?.ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 }

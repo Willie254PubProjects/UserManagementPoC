@@ -1,0 +1,42 @@
+@{
+    Layout = null;
+    var error = ViewData["Error"] as string;
+    var reason = ViewData["Reason"] as string;
+    string message = string.Empty;
+    if (!string.IsNullOrEmpty(error))
+    {
+        message = (error, reason) switch
+        {
+            ("access_denied", "no_matching_user") => "your Microsoft Entra account is not linked to a user in this system",
+            ("access_denied", "return_url_not_permitted") => "the requested return address is not permitted",
+            _ => error + (string.IsNullOrEmpty(reason) ? "" : $" ({reason})")
+        };
+    }
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sign in - User Management Admin</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="bg-light">
+    <div class="container d-flex align-items-center justify-content-center" style="min-height: 100vh;">
+        <div class="card shadow-sm" style="max-width: 420px; width: 100%;">
+            <div class="card-body p-4">
+                <h1 class="h4 mb-1">User Management Admin</h1>
+                <p class="text-muted mb-3">Sign in to manage users, roles, permissions, and access.</p>
+                @if (!string.IsNullOrEmpty(message))
+                {
+                    <div class="alert alert-danger" role="alert">
+                        <strong>Sign-in failed:</strong> @message.
+                    </div>
+                }
+                <a href="/sso/begin" class="btn btn-primary w-100">Sign in with Microsoft Entra ID</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

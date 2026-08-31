@@ -11,6 +11,7 @@ using UserManagementAdmin.Persistence;
 using UserManagementAdmin.Services;
 using UserManagementAdmin.Services.Interfaces;
 using UserManagementPoC.Shared.Abstractions;
+using UserManagementPoC.Shared.Authorization.Sso;
 using UserManagementPoC.Shared.Repositories;
 using UserManagementPoC.Shared.Security;
 using UserManagementPoC.Shared.Security.Contracts;
@@ -26,6 +27,7 @@ builder.Services.AddIdentity<BshUser, BshRole>(options =>
 }).AddEntityFrameworkStores<AdminDbContext>();
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
  var secretKey = Encoding.UTF8.GetBytes(jwtSettings["SecretKey"]!);
+ var identityAuthority = builder.Configuration["IdentityAuthority"] ?? "https://localhost:7057";
  builder.Services.AddAuthentication(options => {
  options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
  options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -34,6 +36,18 @@ var jwtSettings = builder.Configuration.GetSection("JwtSettings");
  options.TokenValidationParameters = new TokenValidationParameters {
  ValidateIssuer = true, ValidateAudience = true, ValidateLifetime = true, ValidateIssuerSigningKey = true, ValidIssuer = jwtSettings["Issuer"], ValidAudience = jwtSettings["Audience"], IssuerSigningKey = new SymmetricSecurityKey(secretKey) 
 };
+ options.Events = new JwtBearerEvents
+ {
+     OnChallenge = context =>
+     {
+         if (context.Request.Headers.Accept.Any(a => a.Contains("text/html")))
+         {
+             context.HandleResponse();
+             context.Response.Redirect("/sso/login");
+         }
+         return Task.CompletedTask;
+     }
+ };
 
 });
  builder.Services.AddAuthorization();
@@ -51,7 +65,8 @@ builder.Services.AddScoped<IPermissionAdministrationService, PermissionAdministr
 builder.Services.AddScoped<IOrganizationUnitService, OrganizationUnitService>();
 builder.Services.AddScoped<IAccessGroupService, AccessGroupService>();
 builder.Services.AddScoped<IUserSessionService, UserSessionService>();
-builder.Services.AddScoped<IPermissionVersionService, PermissionVersionService>();
+ builder.Services.AddScoped<IPermissionVersionService, PermissionVersionService>();
+ builder.Services.AddIdentitySsoClient(identityAuthority);
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -95,6 +110,7 @@ else
 app.UseHttpsRedirection();
 app.UseRouting();
 app.UseRateLimiter();
+app.UseMiddleware<CookieToBearerMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapStaticAssets();

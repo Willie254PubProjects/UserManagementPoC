@@ -1,0 +1,146 @@
+@model UserManagementAdmin.Models.Entities.AccessGroup
+@using UserManagementAdmin.Models.Entities
+@inject UserManagementAdmin.Services.Interfaces.IOrganizationUnitService OrgUnitService
+@{
+    ViewData["Title"] = "Access group details";
+    var id = Context.Request.RouteValues["id"]?.ToString();
+    var users = (UserManagementPoC.Shared.Models.PagedResponse<UserAccessGroup>)ViewBag.Users;
+}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">@Model.Name</h1>
+    <div class="d-flex gap-2">
+        <a asp-action="Edit" asp-route-id="@id" class="btn btn-sm btn-outline-secondary">Edit</a>
+        <a asp-action="Index" class="btn btn-sm btn-outline-secondary">Back to list</a>
+    </div>
+</div>
+<p class="text-muted">@Model.Description</p>
+
+<div class="row g-3">
+    <div class="col-lg-6">
+        <div class="card shadow-sm mb-3">
+            <div class="card-header">Roles</div>
+            <div class="card-body">
+                <form asp-action="AssignRole" asp-route-id="@id" method="post" class="d-flex gap-2 mb-3">
+                    <select name="roleId" class="form-select form-select-sm" required>
+                        <option value="">-- assign role --</option>
+                        @foreach (var item in (IEnumerable<SelectListItem>)ViewData["Roles"]) { <option value="@item.Value">@item.Text</option> }
+                    </select>
+                    <button class="btn btn-sm btn-primary text-nowrap" type="submit">Assign</button>
+                </form>
+                <table class="table table-sm align-middle mb-0">
+                    <tbody>
+                        @foreach (var r in Model.Roles ?? Enumerable.Empty<AccessGroupRole>())
+                        {
+                            <tr>
+                                <td>@(r.Role?.Name ?? r.RoleId)</td>
+                                <td class="text-end">
+                                    <form asp-action="RemoveRole" asp-route-id="@id" method="post" class="d-inline">
+                                        <input type="hidden" name="roleId" value="@r.RoleId" />
+                                        <button class="btn btn-sm btn-outline-danger" type="submit">Remove</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                        @if (Model.Roles == null || !Model.Roles.Any())
+                        {
+                            <tr><td class="text-center text-muted py-3">No roles assigned.</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-header">Permissions</div>
+            <div class="card-body">
+                <form asp-action="AssignPermission" asp-route-id="@id" method="post" class="d-flex gap-2 mb-3">
+                    <select name="permissionId" class="form-select form-select-sm" required>
+                        <option value="">-- assign permission --</option>
+                        @foreach (var item in (IEnumerable<SelectListItem>)ViewData["Permissions"]) { <option value="@item.Value">@item.Text</option> }
+                    </select>
+                    <button class="btn btn-sm btn-primary text-nowrap" type="submit">Assign</button>
+                </form>
+                <table class="table table-sm align-middle mb-0">
+                    <tbody>
+                        @foreach (var p in Model.Permissions ?? Enumerable.Empty<AccessGroupPermission>())
+                        {
+                            <tr>
+                                <td>@(p.Permission?.Code ?? p.PermissionId)</td>
+                                <td class="text-end">
+                                    <form asp-action="RemovePermission" asp-route-id="@id" method="post" class="d-inline">
+                                        <input type="hidden" name="permissionId" value="@p.PermissionId" />
+                                        <button class="btn btn-sm btn-outline-danger" type="submit">Remove</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                        @if (Model.Permissions == null || !Model.Permissions.Any())
+                        {
+                            <tr><td class="text-center text-muted py-3">No permissions assigned.</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card shadow-sm">
+            <div class="card-header">Assigned users</div>
+            <div class="card-body">
+                <form asp-action="AssignUser" asp-route-id="@id" method="post" class="mb-3">
+                    <div class="mb-2">
+                        <select name="userId" class="form-select form-select-sm" required>
+                            <option value="">-- assign user --</option>
+                            @foreach (var item in (IEnumerable<SelectListItem>)ViewData["UserSelect"]) { <option value="@item.Value">@item.Text</option> }
+                        </select>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-8">
+                            <select name="scopeOrganizationUnitId" class="form-select form-select-sm" required>
+                                <option value="">-- scope org unit --</option>
+                                @foreach (var item in (IEnumerable<SelectListItem>)ViewData["OrgUnits"]) { <option value="@item.Value">@item.Text</option> }
+                            </select>
+                        </div>
+                        <div class="col-4">
+                            <select name="cascadeOrgStructure" class="form-select form-select-sm">
+                                <option value="false">No cascade</option>
+                                <option value="true">Cascade</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button class="btn btn-sm btn-primary mt-2" type="submit">Assign user</button>
+                </form>
+                <table class="table table-sm align-middle mb-0">
+                    <thead><tr><th>User</th><th>Scope</th><th>Cascade</th><th></th></tr></thead>
+                    <tbody>
+                        @foreach (var u in users.Items)
+                        {
+                            <tr>
+                                <td>@(u.User?.UserName ?? u.UserId)</td>
+                                <td class="small text-muted">@string.Join(", ", await OrgUnitService.ResolveScopeAsync(u.ScopeOrganizationUnitId, u.CascadeOrgStructure))</td>
+                                <td class="small">@(u.CascadeOrgStructure ? "Yes" : "No")</td>
+                                <td class="text-end">
+                                    <form asp-action="RemoveUser" asp-route-id="@id" method="post" class="d-inline">
+                                        <input type="hidden" name="userId" value="@u.UserId" />
+                                        <button class="btn btn-sm btn-outline-danger" type="submit">Remove</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                        @if (!users.Items.Any())
+                        {
+                            <tr><td colspan="4" class="text-center text-muted py-3">No users assigned.</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        @await Html.PartialAsync("_Pagination", new UserManagementAdmin.Models.ViewModels.PaginationViewModel
+        {
+            Page = users.Page,
+            TotalPages = users.TotalPages,
+            Action = "Details"
+        })
+    </div>
+</div>

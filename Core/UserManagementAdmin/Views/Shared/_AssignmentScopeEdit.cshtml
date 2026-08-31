@@ -1,0 +1,45 @@
+@model UserManagementAdmin.Models.ViewModels.AssignmentScopeEdit
+@{
+    var userId = Context.Request.RouteValues["id"]?.ToString();
+    var orgUnits = (IEnumerable<SelectListItem>)ViewData["OrgUnits"];
+}
+<form asp-action="@Model.UpdateAction" asp-route-id="@userId" method="post" class="row g-1 align-items-center">
+    <input type="hidden" name="assignmentId" value="@Model.AssignmentId" />
+    <div class="col-md-6">
+        <select name="scopeOrganizationUnitId" class="form-select form-select-sm">
+            <option value="">-- scope --</option>
+            @foreach (var item in orgUnits)
+            {
+                if (item.Value == Model.ScopeOrganizationUnitId)
+                {
+                    <option value="@item.Value" selected>@item.Text</option>
+                }
+                else
+                {
+                    <option value="@item.Value">@item.Text</option>
+                }
+            }
+        </select>
+    </div>
+    <div class="col-md-3">
+        <select name="cascadeOrgStructure" class="form-select form-select-sm">
+            @if (Model.CascadeOrgStructure)
+            {
+                <option value="false">No cascade</option>
+                <option value="true" selected>Cascade</option>
+            }
+            else
+            {
+                <option value="false" selected>No cascade</option>
+                <option value="true">Cascade</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-3">
+        <button class="btn btn-sm btn-outline-primary w-100" type="submit">Save</button>
+    </div>
+</form>
+<form asp-action="@Model.RemoveAction" asp-route-id="@userId" method="post" class="mt-1">
+    <input type="hidden" name="assignmentId" value="@Model.AssignmentId" />
+    <button class="btn btn-sm btn-outline-danger" type="submit">Remove assignment</button>
+</form>

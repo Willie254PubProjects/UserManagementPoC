@@ -11,12 +11,12 @@ namespace UserManagementPoC.SampleIdentityConsumer.Controllers;
 public class SamplePermissionController : ControllerBase
 {
     [HttpGet("any-of")]
-    [AuthorizeAnyPermission(Permissions.CardPrinting.Create, Permissions.Account.Approve)]
+    [AuthorizeAnyPermission(Permissions.CardPrinting.Create, Permissions.CardPrinting.Approve)]
     public IActionResult AnyOf()
     {
         return this.ApiOk(new
         {
-            Message = "User has at least one of the permissions: CardPrinting.Create, Account.Approve",
+            Message = "User has at least one of the permissions: CardPrinting.Create, CardPrinting.Approve",
             User = User.Identity?.Name
         });
     }

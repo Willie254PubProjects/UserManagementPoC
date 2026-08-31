@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using UserManagementAdmin.Models.Entities;
 using UserManagementAdmin.Services.Interfaces;
@@ -38,7 +39,23 @@ public class AccessGroupService : IAccessGroupService
             g => g.Id == id,
             q => q.Include(g => g.Roles).ThenInclude(r => r.Role)
                   .Include(g => g.Permissions).ThenInclude(p => p.Permission).ThenInclude(p => p.Type)
-                  .Include(g => g.Permissions).ThenInclude(p => p.Permission).ThenInclude(p => p.SubPermission));
+                  .Include(g => g.Permissions).ThenInclude(p => p.Permission).ThenInclude(p => p.SubPermission)
+                  .Include(g => g.Users).ThenInclude(u => u.User));
+    }
+    public async Task<PagedResponse<UserAccessGroup>> GetUsersAsync(string accessGroupId, int page = 1, int pageSize = 20)
+    {
+        var predicate = (Expression<Func<UserAccessGroup, bool>>)(uag => uag.AccessGroupId == accessGroupId);
+        var totalCount = await _uow.Repository<UserAccessGroup>().CountAsync(predicate);
+        var items = await _uow.Repository<UserAccessGroup>().FindAsync(
+            predicate,
+            q => q.Include(uag => uag.User).OrderByDescending(uag => uag.CreatedAt).Skip((page - 1) * pageSize).Take(pageSize));
+        return new PagedResponse<UserAccessGroup>
+        {
+            Page = page,
+            PageSize = pageSize,
+            TotalCount = totalCount,
+            Items = items.ToList()
+        };
     }
 
     public async Task<AdminResult<AccessGroup>> CreateAsync(string name, string description, DateTime? startDate = null, DateTime? endDate = null)

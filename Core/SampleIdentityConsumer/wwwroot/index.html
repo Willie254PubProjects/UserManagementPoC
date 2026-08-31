@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>UserManagementPoC — Sample Consumer</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="css/site.css?v=2" rel="stylesheet">
+</head>
+<body class="bg-light">
+  <nav class="navbar navbar-expand navbar-dark bg-primary">
+    <div class="container">
+      <a class="navbar-brand" href="/">UserManagementPoC · Sample Consumer</a>
+      <div class="navbar-nav ms-auto">
+        <a class="btn btn-outline-light btn-sm d-none" id="btn-signout" href="/api/sso/logout">Sign out</a>
+      </div>
+    </div>
+  </nav>
+  <main class="container py-4">
+    <div class="alert alert-danger alert-dismissible fade show d-none" id="error-box" role="alert">
+      <span id="error-text"></span>
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    <div class="row g-4">
+      <div class="col-lg-6">
+        <div class="card shadow-sm" id="signed-out">
+          <div class="card-body text-center">
+            <h5 class="card-title">Not signed in</h5>
+            <p class="text-muted">Sign in with Microsoft Entra ID — the only login method.</p>
+            <a class="btn btn-primary" href="/api/sso/login">Sign in with Entra</a>
+          </div>
+        </div>
+        <div class="card shadow-sm d-none" id="signed-in">
+          <div class="card-body">
+            <h5 class="card-title">Signed in</h5>
+            <dl class="row mb-0">
+              <dt class="col-4">Name</dt>
+              <dd class="col-8" id="me-name">-</dd>
+              <dt class="col-4">Email</dt>
+              <dd class="col-8" id="me-email">-</dd>
+              <dt class="col-4">Bank / Branch</dt>
+              <dd class="col-8" id="me-bank">-</dd>
+            </dl>
+          </div>
+        </div>
+        </div>
+      <div class="col-lg-6">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h6 class="card-title">How this works</h6>
+            <ol class="small mb-0">
+              <li><code>/api/sso/login</code> redirects to the Identity service, which redirects to Entra.</li>
+              <li>After sign-in the browser returns to <code>/api/sso/callback?code=...</code> with a short-lived one-time code.</li>
+              <li>The consumer exchanges the code at <code>POST /api/auth/token</code> and stores the tokens in HttpOnly cookies.</li>
+              <li>Each call carries the token through a cookie&rarr;bearer bridge; the SDK evaluates authorization against the Identity service.</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="row mt-4">
+      <div class="col-12">
+        <div class="card shadow-sm">
+          <div class="card-header">Authorization demo</div>
+          <div class="card-body table-responsive">
+            <table class="table table-sm align-middle">
+              <thead>
+                <tr>
+                  <th>Endpoint</th>
+                  <th>URL</th>
+                  <th></th>
+                  <th>Status</th>
+                  <th>Result</th>
+                </tr>
+              </thead>
+              <tbody id="endpoint-body"></tbody>
+            </table>
+            <p class="small text-muted mb-0">Endpoints are decorated with the SDK's authorization attributes; access is evaluated by the Identity service. A 403 means the signed-in user lacks the required role, permission, or resource scope.</p>
+          </div>
+        </div>
+
+        <div class="card shadow-sm mt-4">
+          <div class="card-header">Dynamic tester</div>
+          <div class="card-body">
+            <div class="row g-2 align-items-end mb-3">
+              <div class="col-auto">
+                <label class="form-label small text-muted mb-1" for="dyn-bank">Bank</label>
+                <input id="dyn-bank" class="form-control form-control-sm" style="width: 120px" placeholder="e.g. KE" />
+              </div>
+              <div class="col-auto">
+                <label class="form-label small text-muted mb-1" for="dyn-branch">Branch</label>
+                <input id="dyn-branch" class="form-control form-control-sm" style="width: 120px" placeholder="e.g. 0002" />
+              </div>
+              <div class="col">
+                <span class="small text-muted">Resource scope — applied to the workflow test and the dynamic role/permission tests (leave blank to use your own scope).</span>
+              </div>
+            </div>
+            <div class="row g-3">
+              <div class="col-lg-6">
+                <div class="card">
+                  <div class="card-body">
+                    <h6 class="card-title">Workflow (with scope)</h6>
+                    <div class="d-flex gap-2 mb-2">
+                      <input id="dyn-wf" class="form-control form-control-sm" value="CardPrinting" placeholder="workflow" />
+                      <input id="dyn-action" class="form-control form-control-sm" value="Create" placeholder="action" />
+                    </div>
+                    <button class="btn btn-sm btn-outline-primary" onclick="runDynamic('workflow')">Run</button>
+                    <span class="badge status-badge text-bg-secondary ms-2" id="dyn-workflow-status">-</span>
+                    <div class="result-msg small mt-2" id="dyn-workflow-result"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-lg-6">
+                <div class="card">
+                  <div class="card-body">
+                    <h6 class="card-title">Roles — any / all</h6>
+                    <div class="d-flex gap-2 mb-2">
+                      <select id="dyn-roles-op" class="form-select form-select-sm" style="width: 90px">
+                        <option value="any">any</option>
+                        <option value="all">all</option>
+                      </select>
+                      <input id="dyn-roles-values" class="form-control form-control-sm" placeholder="Administrator, Manager" />
+                    </div>
+                    <button class="btn btn-sm btn-outline-primary" onclick="runDynamic('roles')">Run</button>
+                    <span class="badge status-badge text-bg-secondary ms-2" id="dyn-roles-status">-</span>
+                    <div class="result-msg small mt-2" id="dyn-roles-result"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-lg-6">
+                <div class="card">
+                  <div class="card-body">
+                    <h6 class="card-title">Permissions — any / all</h6>
+                    <div class="d-flex gap-2 mb-2">
+                      <select id="dyn-permissions-op" class="form-select form-select-sm" style="width: 90px">
+                        <option value="any">any</option>
+                        <option value="all">all</option>
+                      </select>
+                      <input id="dyn-permissions-values" class="form-control form-control-sm" placeholder="CardPrinting.Create, CardRequest.View" />
+                    </div>
+                    <button class="btn btn-sm btn-outline-primary" onclick="runDynamic('permissions')">Run</button>
+                    <span class="badge status-badge text-bg-secondary ms-2" id="dyn-permissions-status">-</span>
+                    <div class="result-msg small mt-2" id="dyn-permissions-result"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="js/site.js?v=5"></script>
+</body>
+</html>

@@ -52,15 +52,15 @@ UserManagementPoC
 │   │                        ICurrentUser, repositories
 │   ├── Security             Authentication contracts only:
 │   │                        ITokenGenerator, ITokenValidator,
-│   │                        IUserAuthenticator, models
+│   │                        IEncryptionService, models
 │   └── Authorization        Public SDK: attributes, contracts,
 │                            HTTP client, policy provider,
 │                            authorization handler
 │
 ├── Core
 │   ├── Identity             Merged auth + authorization service.
-│   │                        Implements IUserAuthenticator,
-│   │                        ITokenGenerator, ITokenValidator,
+│   │                        Implements ITokenGenerator,
+│   │                        ITokenValidator,
 │   │                        IAuthorizationEvaluator.
 │   │                        Calls UserManagementAdmin over HTTP.
 │   │
@@ -93,8 +93,7 @@ the Identity service or the consuming application.
 | `IResourceScopeResolver` | Resolve the target resource's scope (`BankId`/`BranchId`) for a request | `NoOpResourceScopeResolver` (SDK default) | Shared.Authorization |
 | `ITokenGenerator` | Generate JWT + refresh token | `TokenService` (Identity) | Shared.Security |
 | `ITokenValidator` | Validate a JWT and return user info | `TokenService` (Identity) | Shared.Security |
-| `IUserAuthenticator` | Authenticate credentials and issue tokens | `AuthenticationService` (Identity) | Shared.Security |
-| `IEncryptionService` | Encrypt/decrypt credentials during login | `AesEncryptionService` (Shared.Security) | Shared.Security |
+| `IEncryptionService` | Encrypt/decrypt sensitive values (retained contract) | `AesEncryptionService` (Shared.Security) | Shared.Security |
 | `IKeyVaultService` | Provide signing/encryption secrets from configuration | `ConfigKeyVaultService` (Identity) | Shared.Security |
 | `ICurrentUser` | Access current user identity (Id, UserName, DisplayName, Email, BankId, BranchId, CountryCode) from JWT claims | `CurrentUser` (SDK internal) | Shared.Shared |
 | `ICacheService` | Generic caching abstraction | `MemoryCacheService` (Identity) | Shared.Shared |
@@ -226,7 +225,7 @@ The token maps the entire identity of `UserInfo` (which implements
 -   **Roles** -- not embedded
 -   **Permissions** -- not embedded
 -   **Workflow data** -- not embedded
--   **given_name / family_name** -- not embedded (only `display_name`)
+
 
 ### 4.3 Token Abstraction
 
@@ -436,7 +435,6 @@ remains clear and readable: `Permissions.CardPrinting.Create`.
 ```
 Constants/Permissions/
 ├── CardPrinting.cs   → partial Permissions { static class CardPrinting { ... } }
-├── Account.cs        → partial Permissions { static class Account { ... } }
 └── CardRequest.cs    → partial Permissions { static class CardRequest { ... } }
 ```
 
@@ -465,8 +463,8 @@ namespace UserManagementPoC.Shared.Authorization.Constants;
 public static class BshRoles
 {
     public const string Administrator = "Administrator";
-    public const string Manager       = "Manager";
-    public const string Viewer        = "Viewer";
+    public const string BranchManager       = "BranchManager";
+    public const string CardsMaker        = "CardsMaker";
 }
 ```
 
@@ -481,7 +479,7 @@ subfolder.
 | `[AuthorizeAnyRole(BshRoles.Administrator, BshRoles.Manager)]` | Role | Or | `Role\|Or\|Administrator,Manager` |
 | `[AuthorizeAllRoles(BshRoles.Administrator)]` | Role | And | `Role\|And\|Administrator` |
 | `[AuthorizeAnyPermission(Permissions.CardPrinting.Create)]` | Permission | Or | `Permission\|Or\|CardPrinting.Create` |
-| `[AuthorizeAllPermissions(Permissions.Account.View, Permissions.CardRequest.View)]` | Permission | And | `Permission\|And\|Account.View,CardRequest.View` |
+| `[AuthorizeAllPermissions(Permissions.CardPrinting.View, Permissions.CardRequest.View)]` | Permission | And | `Permission\|And\|CardPrinting.View,CardRequest.View` |
 
 ``` csharp
 // User must hold at least one of these permissions
@@ -584,8 +582,19 @@ The `AuthorizationPolicyProvider` reverses this:
 ```
 
 The box shows the authorization subset of the admin service. It also
-exposes the auth endpoints used during login (`POST /api/auth/verify-credentials`,
+exposes the auth endpoints used during SSO login (`GET /api/auth/users/by-login`,
+`GET /api/auth/users/by-email`, `POST /api/auth/users/{userId}/logins`,
 `POST /api/auth/sessions`, `GET /api/auth/users/{id}`) -- see 11.1.
+
+The admin service also exposes a full management API (`/api/users`,
+`/api/roles`, `/api/permissions`, `/api/permission-types`,
+`/api/sub-permissions`, `/api/organization-units`,
+`/api/organization-unit-types`, `/api/access-groups`) covering CRUD and scoped
+assignment (users to roles/permissions/access-groups, roles to permissions,
+access-group membership), per-assignment scope edit/remove
+(`PUT/DELETE /api/users/{userId}/assignments/roles|permissions|access-groups/{assignmentId}`),
+plus user lifecycle (update, soft deactivate, guarded delete, external-login
+unlink) and a user-validity window enforced during role/permission resolution.
 
 ### 7.2 Handler: Two Branches
 
@@ -662,9 +671,14 @@ AuthorizationService.EvaluateAsync(context)
 ├── Validate session: GET /api/auth/sessions/{securityVersion}
 │   └── If inactive or expired (ExpiresAt / idle timeout) → DENIED
 │
-├── Scope guard (bank)
-│   ├── If context.BankId and the user's bank_id claim are both set
-│   │   and differ → resource is outside the user's subsidiary → DENIED
+├── Scope guard (domicile ancestry + bank subtree)
+│   ├── Domicile ancestry: the resource BranchId must be within the
+│   │   user's domicile subtree (GET /api/auth/users/{userId}/domicile-scope,
+│   │   cached; fail-closed: unknown/empty branch or scope → DENIED)
+│   └── Bank subtree (when context.BankId is supplied): resolve the bank
+│       (by UnitCode or CountryCode, so `KE` or `0001` both work) via
+│       GET /api/auth/org-units/resolve (cached) and require the resource
+│       BranchId to be under it → otherwise DENIED
 │
 ├── Role evaluation (if roles required)
 │   ├── GET /api/auth/users/{userId}/roles (cached)
@@ -894,6 +908,15 @@ cannot be computed safely, access is denied.
 
 A new application requires four steps.
 
+**A note on cookies (PoC only).** Cookies -- and
+`CookieToBearerMiddleware` -- exist solely to authenticate the **PoC browser
+UI** (the consumer demo page and the admin UI). They are **not** part of the
+API/SDK journey: `AddIdentityAuthorization` and `IdentitySsoClient` forward
+the `Authorization` header, never cookies. In production the UI is an Angular
+(SPA) application that interacts **purely via API** -- it holds the access
+token and sends `Authorization: Bearer <token>` on every call.
+`CookieToBearerMiddleware` is demo-only and should not be used in production.
+
 ### Step 1: Reference the NuGet Package
 
 ``` xml
@@ -1011,42 +1034,123 @@ The application contains **zero authorization logic**. It owns:
 Everything else -- session validation, permission fetching, caching,
 policy resolution, evaluation -- is handled by the framework.
 
+**Reference consumer.** `Core.SampleIdentityConsumer` ships a runnable
+browser demo (`https://localhost:7205/`) that walks the full journey:
+SSO login (authorization-code exchange), token storage in HttpOnly cookies
+with a demo-only cookie&rarr;bearer bridge, current-user lookup, and a page
+that invokes the `[AuthorizeWorkflow]`/attribute-decorated endpoints and shows
+200 vs 403. Its `README.md` is the onboarding guide for a new application.
+*(PoC UI only — production is an Angular SPA using the API with a Bearer token; no cookies.)*
+
+**Admin UI.** `Core.UserManagementAdmin` ships a Bootstrap admin console
+(`https://localhost:7137/`) that uses the same SSO journey (a second Identity
+`ApiClients` entry, `usermanagement-admin`), with a cookie&rarr;bearer bridge
+and a JwtBearer `OnChallenge` that redirects browser requests to `/sso/login`
+while API requests keep returning 401. Server-rendered Razor pages drive the
+management operations through the service layer directly. The SSO client
+plumbing (`IdentitySsoClient`, `CookieToBearerMiddleware`,
+`AddIdentitySsoClient`) lives in `Shared.Authorization` and is shared by the
+consumer and the admin app. *(The cookie bridge is PoC UI only; production
+uses the API with a Bearer token — no cookies.)*
+
 ------------------------------------------------------------------------
 
 ## 11. Complete Data Flows
 
-### 11.1 Login Flow
+### 11.1 Login Flow (OpenID Connect with Microsoft Entra ID)
+
+SSO is the **only** login method; The Identity
+service is an OpenID Connect relying party that delegates authentication to
+Entra, maps the authenticated Entra principal to a local `BshUser` via
+ASP.NET Identity External Logins, and follows the **authorization-code
+journey**: the client's backend redeems a short-lived single-use code at the
+token endpoint for the app tokens.
 
 ```
-Client                     Identity                   UserManagementAdmin
-  │                          │                              │
-  │ POST /api/auth/login     │                              │
-  │ { username, password }   │                              │
-  │─────────────────────────►│                              │
-  │                          │ Encrypt password (AES)       │
-  │                          │                              │
-  │                          │ POST /api/auth/verify-creds  │
-  │                          │─────────────────────────────►│
-  │                          │                              │ Verify via
-  │                          │                              │ SignInManager
-  │                          │   { Success, UserInfo }      │
-  │                          │◄─────────────────────────────│
-  │                          │                              │
-  │                          │ POST /api/auth/sessions      │
-  │                          │ { UserId, RemoteIp, UA }     │
-  │                          │─────────────────────────────►│
-  │                          │                              │ Create UserSession
-  │                          │   { SecurityVersion = GUID } │ (SecurityVersion)
-  │                          │◄─────────────────────────────│
-  │                          │                              │
-  │                          │ ClaimsFactory.Create(user, sv)│
-  │                          │ TokenService.GenerateToken() │
-  │                          │                              │
-  │  { AccessToken,          │                              │
-  │    RefreshToken,         │                              │
-  │    ExpiresAt }           │                              │
-  │◄─────────────────────────│                              │
+Browser                Identity                  Microsoft Entra ID         UserManagementAdmin        API Client (backend)
+  │                        │                             │                          │                            │
+  │ GET /api/auth/login    │                             │                          │                            │
+  │  ?clientId=&returnUrl= │                             │                          │                            │
+  │  (returnUrl host must  │                             │                          │                            │
+  │   be a supported host) │                             │                          │                            │
+  │───────────────────────►│                             │                          │                            │
+  │                        │ Challenge(OpenIdConnect)    │                          │                            │
+  │                        │───────────────────────────►│                          │                            │
+  │                        │                             │ User signs in            │                            │
+  │ 302 → Entra sign-in    │◄────────────────────────────│                          │                            │
+  │◄───────────────────────│                             │                          │                            │
+  │ 302 → /signin-oidc     │   authorization code →      │                          │                            │
+  │───────────────────────►│                             │                          │                            │
+  │                        │ Validate ID token           │                          │                            │
+  │                        │ GET /api/auth/users/by-login│                          │                            │
+  │                        │   { provider=EntraId,       │                          │                            │
+  │                        │     providerKey=oid }       │                          │                            │
+  │                        │───────────────────────────►│                          │                            │
+  │                        │   { UserInfo } or 404       │                          │                            │
+  │                        │◄────────────────────────────│                          │                            │
+  │                        │ [if no link] by-email +     │                          │                            │
+  │                        │   POST .../logins (auto-link)│                          │                            │
+  │                        │ POST /api/auth/sessions     │                          │                            │
+  │                        │ { UserId, RemoteIp, UA }    │                          │                            │
+  │                        │───────────────────────────►│                          │                            │
+  │                        │   { SecurityVersion = GUID }│                          │                            │
+  │                        │◄────────────────────────────│                          │                            │
+  │                        │ Mint one-time authorization │                          │                            │
+  │                        │ code { userId, sv, clientId}│                          │                            │
+  │                        │                             │                          │                            │
+  │ 302 → returnUrl?code=..│                             │                          │                            │
+  │◄───────────────────────│                             │                          │                            │
+  │                        │                             │                          │                            │
+  │                        │                             │                          │  GET callback?code=...    │
+  │  (browser follows to   │                             │                          │──────────────────────────►│
+  │   client callback)     │                             │                          │                            │
+  │                        │                             │                          │  POST /api/auth/token      │
+  │                        │                             │                          │  { code, clientId,        │
+  │                        │                             │                          │    clientSecret }          │
+  │                        │◄────────────────────────────────────────────────────────│                            │
+  │                        │ Consume code (single-use)   │                          │                            │
+  │                        │ Generate JWT + refresh      │                          │                            │
+  │                        │ { access_token,             │                          │                            │
+  │                        │   refresh_token,            │                          │                            │
+  │                        │   expires_at, user }        │                          │                            │
+  │                        │────────────────────────────────────────────────────────►│                            │
 ```
+
+Notes:
+
+-   **External login mapping** — `loginProvider = "EntraId"`,
+    `providerKey` = the Entra ObjectId (`oid` claim, `sub` fallback). Stored in
+    the `AspNetUserLogins` table via `UserManager.AddLoginAsync`; no schema change.
+-   **First login** — when no link exists, the Entra email is matched against
+    local users; an existing `BshUser` with the same email is linked
+    automatically and signed in.
+-   **Deny unknown users** — an Entra user with no matching local `BshUser` is
+    denied; no auto-provisioning. The Identity service stays API-only and
+    delegates error display to the client: the browser is redirected to the
+    client's callback (the validated `returnUrl`, or the client's
+    `ApiClients[*].DefaultReturnUrl` fallback) with
+    `?error=access_denied&reason=no_matching_user` (or
+    `reason=return_url_not_permitted` when the returnUrl host was rejected).
+    Clients render the error (e.g. the admin `/sso/login` page or the consumer
+    demo).
+-   **Authorization-code handoff** — the OIDC callback redirects the browser to
+    `returnUrl?code=...` with a short-lived (TTL ~5 min), single-use,
+    client-bound code, never the tokens. `POST /api/auth/token` validates
+    client credentials (constant-time), consumes the code, and returns
+    `{ access_token, refresh_token, expires_at, user }` in the response body.
+-   **Supported-hosts returnUrl validation** — `returnUrl` must be an absolute
+    `http(s)` URI with no userinfo whose authority (`host[:port]`) matches an
+    entry in the client's `ApiClients[*].AllowedReturnUrlHosts` (or the global
+    `OpenIdConnect:AllowedReturnUrlHosts`). Invalid hosts are rejected at the
+    login endpoint and again in the OIDC callback.
+-   **PoC caveat** — `GET /api/auth/users/by-login`, `GET /api/auth/users/by-email`,
+    `POST /api/auth/users/{userId}/logins`, `POST /api/auth/sessions`, and
+    `GET /api/auth/users/{id}` on UserManagementAdmin are `[AllowAnonymous]`
+    **for the PoC only** (Identity cannot forward a client bearer token during
+    the pre-token OIDC callback). They are opaque-key/email lookups with the
+    session still enforced server-side. **Production must secure them with
+    service-to-service authentication** (machine/client-credentials tokens or
+    mTLS).
 
 ### 11.2 Workflow Authorization Flow
 
@@ -1136,8 +1240,16 @@ Client                     Identity                   UserManagementAdmin
 
 ### 11.4 Logout Flow
 
+Logout invalidates the app-level server-side session only. The client
+(consumer/admin) calls `IdentitySsoClient.LogoutAsync()` (POST
+`/api/auth/logout` with the bearer token), then clears its local cookies. It
+**deliberately does not** terminate the Entra (SSO) session, so other
+applications that share the SSO session (e.g. email) remain signed in.
+*(The cookies cleared here are the PoC UI-only bridge; production Angular
+SPA simply discards its in-memory token.)*
+
 ```
-Client                     Identity                   UserManagementAdmin
+Client (consumer/admin)       Identity                   UserManagementAdmin
   │                          │                              │
   │ POST /api/auth/logout    │                              │
   │ [Authorize]              │                              │
@@ -1155,9 +1267,13 @@ Client                     Identity                   UserManagementAdmin
   │                          │                              │ SecurityVersion → "B"
   │                          │◄─────────────────────────────│
   │                          │                              │
-  │  "Logged out"            │                              │
+  │ Clear cookies,           │                              │
+  │ redirect to post-logout  │                              │
+  │ (no Entra end-session)   │                              │
   │◄─────────────────────────│                              │
 ```
+*(Clear cookies = the PoC UI-only bridge; production Angular SPA discards its
+in-memory token.)*
 
 After logout, any request with the old token hits:
 

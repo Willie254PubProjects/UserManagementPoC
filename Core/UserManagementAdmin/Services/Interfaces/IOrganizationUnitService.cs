@@ -14,6 +14,7 @@ public interface IOrganizationUnitService
 {
     Task<OrgUnitCodes> ResolveCodesAsync(string domicileUnitId);
     Task<IReadOnlySet<string>> ResolveScopeAsync(string scopeOrganizationUnitId, bool cascade);
+    Task<IReadOnlySet<string>> ResolveScopeByCodeAsync(string code);
 
     Task<IEnumerable<OrganizationUnit>> GetAllAsync();
     Task<OrganizationUnit?> GetByIdAsync(string id);
@@ -24,4 +25,6 @@ public interface IOrganizationUnitService
 
     Task<IEnumerable<OrganizationUnitType>> GetTypesAsync();
     Task<AdminResult<OrganizationUnitType>> CreateTypeAsync(string name, string description, bool isSubsidiary);
+    Task<AdminResult<OrganizationUnitType>> UpdateTypeAsync(string id, string name, string description, bool isSubsidiary);
+    Task<AdminResult<bool>> DeleteTypeAsync(string id);
 }

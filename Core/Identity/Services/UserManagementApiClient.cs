@@ -17,13 +17,6 @@ public class UserManagementApiClient : IUserManagementApiClient
     {
         _flurlClient = new FlurlClient(httpClient);
     }
-    public async Task<VerifyCredentialsResponse?> VerifyCredentialsAsync(VerifyCredentialsRequest request, CancellationToken cancellationToken = default)
-    {
-        var apiResponse = await _flurlClient.Request("/api/auth/verify-credentials")
-                                            .PostJsonAsync(request, cancellationToken: cancellationToken)
-                                            .ReceiveJson<ApiResponse<VerifyCredentialsResponse>>();
-        return apiResponse?.Data;
-    }
     public async Task<UserInfo?> GetUserByIdAsync(string userId, CancellationToken cancellationToken = default)
     {
         var apiResponse = await _flurlClient.Request("/api/auth/users", userId)
@@ -68,6 +61,48 @@ public class UserManagementApiClient : IUserManagementApiClient
         var apiResponse = await _flurlClient.Request("/api/auth/sessions", securityVersion)
                                             .AllowAnyHttpStatus()
                                             .GetJsonAsync<ApiResponse<SessionValidationResult>>(cancellationToken: cancellationToken);
+
+        return apiResponse?.Data;
+    }
+    public async Task<UserInfo?> FindByExternalLoginAsync(string loginProvider, string providerKey, CancellationToken cancellationToken = default)
+    {
+        var apiResponse = await _flurlClient.Request("/api/auth/users/by-login")
+                                            .SetQueryParams(new { provider = loginProvider, providerKey })
+                                            .AllowAnyHttpStatus()
+                                            .GetJsonAsync<ApiResponse<UserInfo>>(cancellationToken: cancellationToken);
+
+        return apiResponse?.Data;
+    }
+    public async Task<UserInfo?> FindByEmailAsync(string email, CancellationToken cancellationToken = default)
+    {
+        var apiResponse = await _flurlClient.Request("/api/auth/users/by-email")
+                                            .SetQueryParams(new { email })
+                                            .AllowAnyHttpStatus()
+                                            .GetJsonAsync<ApiResponse<UserInfo>>(cancellationToken: cancellationToken);
+
+        return apiResponse?.Data;
+    }
+    public async Task<bool> LinkExternalLoginAsync(string userId, string loginProvider, string providerKey, string? providerDisplayName, CancellationToken cancellationToken = default)
+    {
+        var response = await _flurlClient.Request("/api/auth/users", userId, "logins")
+                                         .PostJsonAsync(new { loginProvider, providerKey, providerDisplayName }, cancellationToken: cancellationToken);
+
+        return response.ResponseMessage.IsSuccessStatusCode;
+    }
+    public async Task<string[]?> ResolveOrgUnitScopeAsync(string value, CancellationToken cancellationToken = default)
+    {
+        var apiResponse = await _flurlClient.Request("/api/auth/org-units/resolve")
+                                            .SetQueryParams(new { value })
+                                            .AllowAnyHttpStatus()
+                                            .GetJsonAsync<ApiResponse<string[]>>(cancellationToken: cancellationToken);
+
+        return apiResponse?.Data;
+    }
+    public async Task<string[]?> GetDomicileScopeAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        var apiResponse = await _flurlClient.Request("/api/auth/users", userId, "domicile-scope")
+                                            .AllowAnyHttpStatus()
+                                            .GetJsonAsync<ApiResponse<string[]>>(cancellationToken: cancellationToken);
 
         return apiResponse?.Data;
     }

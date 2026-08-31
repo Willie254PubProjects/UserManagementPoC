@@ -1,0 +1,36 @@
+@model System.Collections.Generic.List<UserManagementAdmin.Models.Entities.Permission>
+@{
+    ViewData["Title"] = "Permissions";
+}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">Permission catalogue</h1>
+    <div class="d-flex gap-2">
+        <a asp-action="Types" class="btn btn-sm btn-outline-secondary">Permission types</a>
+        <a asp-action="SubPermissions" class="btn btn-sm btn-outline-secondary">Sub-permissions</a>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead>
+                <tr><th>Code</th><th>Description</th><th>Type</th><th>Sub-permission</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var p in Model)
+                {
+                    <tr>
+                        <td><code>@p.Code</code></td>
+                        <td>@p.Description</td>
+                        <td>@(p.Type?.Name)</td>
+                        <td>@(p.SubPermission?.Name)</td>
+                    </tr>
+                }
+                @if (!Model.Any())
+                {
+                    <tr><td colspan="4" class="text-center text-muted py-4">No permissions found.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

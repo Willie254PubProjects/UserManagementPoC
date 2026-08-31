@@ -44,8 +44,26 @@ public class AccessGroupsController : ControllerBase
             {
                 p.PermissionId,
                 p.Permission?.Code
+            }),
+            Users = (group.Users ?? Enumerable.Empty<UserAccessGroup>()).Select(u => new
+            {
+                u.UserId,
+                UserName = u.User?.UserName,
+                Email = u.User?.Email,
+                u.ScopeOrganizationUnitId,
+                u.CascadeOrgStructure,
+                u.Status,
+                u.StartDate,
+                u.EndDate
             })
         });
+    }
+
+    [HttpGet("{id}/users")]
+    public async Task<IActionResult> GetUsers(string id, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+    {
+        var users = await _service.GetUsersAsync(id, page, pageSize);
+        return this.ApiOk(users);
     }
 
     [HttpPost]

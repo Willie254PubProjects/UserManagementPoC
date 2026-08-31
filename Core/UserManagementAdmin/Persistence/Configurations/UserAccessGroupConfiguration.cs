@@ -10,7 +10,7 @@ namespace UserManagementAdmin.Persistence.Configurations
         {
             builder.ToTable("UserAccessGroups");
             builder.HasKey(uag => uag.Id);
-            builder.HasOne(uag => uag.AccessGroup).WithMany().HasForeignKey(uag => uag.AccessGroupId);
+            builder.HasOne(uag => uag.AccessGroup).WithMany(g => g.Users).HasForeignKey(uag => uag.AccessGroupId);
             builder.HasOne(uag => uag.User).WithMany().HasForeignKey(uag => uag.UserId);
             builder.HasOne(uag => uag.OrganizationUnit).WithMany().HasForeignKey(uag => uag.ScopeOrganizationUnitId);
         }

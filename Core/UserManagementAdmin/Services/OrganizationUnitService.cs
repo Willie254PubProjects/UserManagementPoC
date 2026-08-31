@@ -96,6 +96,20 @@ public class OrganizationUnitService : IOrganizationUnitService
         return codes;
     }
 
+    public async Task<IReadOnlySet<string>> ResolveScopeByCodeAsync(string code)
+    {
+        if (string.IsNullOrWhiteSpace(code)) return new HashSet<string>();
+
+        var lookup = await GetLookupAsync();
+        var node = lookup.ById.Values.FirstOrDefault(n =>
+                string.Equals(n.UnitCode, code, StringComparison.OrdinalIgnoreCase))
+            ?? lookup.ById.Values.FirstOrDefault(n =>
+                n.IsSubsidiary && string.Equals(n.CountryCode, code, StringComparison.OrdinalIgnoreCase));
+        if (node == null) return new HashSet<string>();
+
+        return await ResolveScopeAsync(node.Id, true);
+    }
+
     public async Task<IEnumerable<OrganizationUnit>> GetAllAsync()
     {
         return await _uow.Repository<OrganizationUnit>().GetAllAsync(
@@ -279,6 +293,40 @@ public class OrganizationUnitService : IOrganizationUnitService
         await _uow.SaveChangesAsync();
         await InvalidateLookupAsync();
         return AdminResult<OrganizationUnitType>.Ok(type);
+    }
+    public async Task<AdminResult<OrganizationUnitType>> UpdateTypeAsync(string id, string name, string description, bool isSubsidiary)
+    {
+        var type = await _uow.Repository<OrganizationUnitType>().GetByIdAsync(id);
+        if (type == null) return AdminResult<OrganizationUnitType>.Fail("Organization unit type not found");
+        if (string.IsNullOrWhiteSpace(name)) return AdminResult<OrganizationUnitType>.Fail("Name is required");
+        var duplicate = await _uow.Repository<OrganizationUnitType>().AnyAsync(t => t.Id != id && t.Name.ToLower() == name.ToLower());
+        if (duplicate) return AdminResult<OrganizationUnitType>.Fail($"Type '{name}' already exists");
+
+        var inUse = await _uow.Repository<OrganizationUnit>().AnyAsync(o => o.TypeId == id);
+        if (inUse && type.IsSubsidiary != isSubsidiary)
+            return AdminResult<OrganizationUnitType>.Fail("Cannot change the subsidiary flag of a type that is in use by organization units");
+
+        type.Name = name;
+        type.Description = description ?? type.Description;
+        type.IsSubsidiary = isSubsidiary;
+        type.UpdatedAt = DateTime.UtcNow;
+        type.LastUpdatedBy = "system";
+        _uow.Repository<OrganizationUnitType>().Update(type);
+        await _uow.SaveChangesAsync();
+        await InvalidateLookupAsync();
+        return AdminResult<OrganizationUnitType>.Ok(type);
+    }
+    public async Task<AdminResult<bool>> DeleteTypeAsync(string id)
+    {
+        var type = await _uow.Repository<OrganizationUnitType>().GetByIdAsync(id);
+        if (type == null) return AdminResult<bool>.Fail("Organization unit type not found");
+        var inUse = await _uow.Repository<OrganizationUnit>().AnyAsync(o => o.TypeId == id);
+        if (inUse) return AdminResult<bool>.Fail("Cannot delete a type that is in use by organization units");
+
+        _uow.Repository<OrganizationUnitType>().Delete(type);
+        await _uow.SaveChangesAsync();
+        await InvalidateLookupAsync();
+        return AdminResult<bool>.Ok(true);
     }
 
     private async Task<OrgUnitLookup> GetLookupAsync()

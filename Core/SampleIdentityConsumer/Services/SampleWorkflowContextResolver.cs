@@ -12,7 +12,7 @@ public class SampleWorkflowContextResolver : IWorkflowContextResolver
     {
         var routeData = httpContext.GetRouteData();
         var workflow = routeData.Values["workflow"]?.ToString() ?? "Unknown";
-        var action = routeData.Values["action"]?.ToString() ?? "Unknown";
+        var action = routeData.Values["wfAction"]?.ToString() ?? "Unknown";
         var actionStep = routeData.Values["actionStep"]?.ToString();
 
         var wf = ResolveWorkflow(workflow, action);
@@ -39,12 +39,6 @@ public class SampleWorkflowContextResolver : IWorkflowContextResolver
             ("CardPrinting", "Approve") => ([Permissions.CardPrinting.Approve], []),
             ("CardPrinting", "Submit") => ([Permissions.CardPrinting.Submit], []),
             ("CardPrinting", "Invoke") => ([Permissions.CardPrinting.Invoke], []),
-            ("Account", "Create") => ([Permissions.Account.Create], []),
-            ("Account", "View") => ([Permissions.Account.View], []),
-            ("Account", "Edit") => ([Permissions.Account.Edit], []),
-            ("Account", "Approve") => ([Permissions.Account.Approve], []),
-            ("Account", "Submit") => ([Permissions.Account.Submit], []),
-            ("Account", "Invoke") => ([Permissions.Account.Invoke], []),
             ("CardRequest", "Create") => ([Permissions.CardRequest.Create], []),
             ("CardRequest", "View") => ([Permissions.CardRequest.View], []),
             ("CardRequest", "Edit") => ([Permissions.CardRequest.Edit], []),

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using UserManagementAdmin.Models.Requests;
 using UserManagementAdmin.Services.Interfaces;
 using UserManagementPoC.Shared.Extensions;
 
@@ -28,5 +29,19 @@ public class PermissionsController : ControllerBase
             SubPermission = p.SubPermission?.Name
         });
         return this.ApiOk(result);
+    }
+    [HttpPost]
+    public async Task<IActionResult> Create([FromBody] CreatePermissionRequest request)
+    {
+        var result = await _service.CreatePermissionAsync(request.PermissionTypeId, request.SubPermissionId, request.Description);
+        if (!result.Success) return this.ApiBadRequest(result.Error ?? "Permission creation failed");
+        return this.ApiOk(result.Data, "Permission created");
+    }
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(string id)
+    {
+        var result = await _service.DeletePermissionAsync(id);
+        if (!result.Success) return this.ApiBadRequest(result.Error ?? "Permission deletion failed");
+        return this.ApiOk("Permission deleted");
     }
 }

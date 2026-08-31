@@ -1,0 +1,14 @@
+@model UserManagementAdmin.Models.ViewModels.PaginationViewModel
+@if (Model.TotalPages > 1)
+{
+    <nav>
+        <ul class="pagination pagination-sm">
+            @for (var p = 1; p <= Model.TotalPages; p++)
+            {
+                <li class="page-item @(p == Model.Page ? "active" : "")">
+                    <a class="page-link" asp-action="@Model.Action" asp-route-page="@p" asp-route-search="@Model.Search">@p</a>
+                </li>
+            }
+        </ul>
+    </nav>
+}

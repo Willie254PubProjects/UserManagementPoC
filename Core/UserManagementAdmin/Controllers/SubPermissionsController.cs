@@ -28,4 +28,18 @@ public class SubPermissionsController : ControllerBase
         var sp = await _service.CreateSubPermissionAsync(request.Name, request.Description);
         return this.ApiOk(sp, "Sub-permission created");
     }
+    [HttpPut("{id}")]
+    public async Task<IActionResult> Update(string id, [FromBody] UpdateSubPermissionRequest request)
+    {
+        var result = await _service.UpdateSubPermissionAsync(id, request.Name, request.Description);
+        if (!result.Success) return this.ApiBadRequest(result.Error ?? "Sub-permission update failed");
+        return this.ApiOk(result.Data, "Sub-permission updated");
+    }
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(string id)
+    {
+        var result = await _service.DeleteSubPermissionAsync(id);
+        if (!result.Success) return this.ApiBadRequest(result.Error ?? "Sub-permission deletion failed");
+        return this.ApiOk("Sub-permission deleted");
+    }
 }

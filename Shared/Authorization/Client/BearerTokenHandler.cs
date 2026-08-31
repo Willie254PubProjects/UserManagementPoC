@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Http;
 
 namespace UserManagementPoC.Shared.Authorization.Client;
 
-internal class BearerTokenHandler : DelegatingHandler
+public class BearerTokenHandler : DelegatingHandler
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
 

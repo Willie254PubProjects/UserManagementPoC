@@ -29,7 +29,7 @@ UserManagementPoC
 │   ├── Shared           Cross-cutting contracts, base entities, ICacheService,
 │   │                    ICurrentUser, repositories
 │   ├── Security         Authentication contracts (ITokenGenerator,
-│   │                    ITokenValidator, IUserAuthenticator, IEncryptionService)
+│   │                    ITokenValidator, IEncryptionService)
 │   └── Authorization    Public SDK: authorization attributes, contracts,
 │                        HTTP client, policy provider, evaluation handler,
 │                        permission/role constants
@@ -71,9 +71,15 @@ dotnet run --project AppHost
 ```
 
 AppHost (Aspire) starts the Identity service, UserManagementAdmin, and the
-SampleIdentityConsumer. Log in via `POST /api/auth/login`, then exercise the
-sample consumer's `/api/sample/*` endpoints to see workflow and attribute-based
-authorization in action.
+SampleIdentityConsumer. SSO (Microsoft Entra ID / OpenID Connect) is the only
+login method. Open the sample consumer's demo UI at
+`https://localhost:7205/` and sign in: the browser runs the Entra flow, the
+consumer exchanges the returned one-time code for the app JWT at the Identity
+`POST /api/auth/token` endpoint, and the page then lets you call the
+`/api/sample/*` endpoints to see workflow, role, permission, and resource-scope
+authorization in action (200 vs 403). See
+[`Core/SampleIdentityConsumer/README.md`](./Core/SampleIdentityConsumer/README.md)
+for the full onboarding guide.
 
 ## Documentation
 

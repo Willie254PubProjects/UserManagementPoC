@@ -1,5 +1,9 @@
 using System.Security.Claims;
 
+using Microsoft.AspNetCore.Authentication;
+
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+
 using Microsoft.AspNetCore.Authorization;
 
 using Microsoft.AspNetCore.Mvc;
@@ -20,35 +24,41 @@ namespace UserManagementPoC.Identity.Controllers;
 [Route("api/auth")]
 public class AuthController : ControllerBase
 {
-    private readonly IUserAuthenticator _authenticator;
     private readonly ITokenGenerator _tokenGenerator;
-    private readonly ITokenValidator _tokenValidator;
     private readonly RefreshTokenService _refreshTokenService;
     private readonly IUserManagementApiClient _userManagementClient;
-    public AuthController(IUserAuthenticator authenticator, 
-        ITokenGenerator tokenGenerator, 
-        ITokenValidator tokenValidator, 
-        RefreshTokenService refreshTokenService, 
-        IUserManagementApiClient userManagementClient)
+    private readonly IConfiguration _configuration;
+    public AuthController(ITokenGenerator tokenGenerator,
+        RefreshTokenService refreshTokenService,
+        IUserManagementApiClient userManagementClient,
+        IConfiguration configuration)
     {
-        _authenticator = authenticator;
         _tokenGenerator = tokenGenerator;
-        _tokenValidator = tokenValidator;
         _refreshTokenService = refreshTokenService;
         _userManagementClient = userManagementClient;
+        _configuration = configuration;
 
     }
     [EnableRateLimiting("auth")]
-    [HttpPost("login")]
-    public async Task<IActionResult> Login([FromBody] LoginRequest request)
+    [HttpGet("login")]
+    public IActionResult Login([FromQuery] string? clientId = null, [FromQuery] string? returnUrl = null)
     {
-        var response = await _authenticator.LoginAsync(request);
-        if (string.IsNullOrEmpty(response.AccessToken))
+        var target = string.IsNullOrWhiteSpace(returnUrl)
+            ? _configuration["OpenIdConnect:DefaultReturnUrl"]
+            : returnUrl;
+
+        if (string.IsNullOrEmpty(target) || SsoService.ValidateReturnUrl(target, clientId, _configuration) == null)
         {
-            return this.ApiUnauthorized("Invalid username or password");
+            return this.ApiBadRequest("Return URL is not allowed");
 
         }
-        return this.ApiOk(response);
+        var properties = new AuthenticationProperties { RedirectUri = target };
+        if (!string.IsNullOrEmpty(clientId))
+        {
+            properties.Items["client_id"] = clientId;
+
+        }
+        return Challenge(properties, OpenIdConnectDefaults.AuthenticationScheme);
 
     }
     [HttpPost("refresh")]

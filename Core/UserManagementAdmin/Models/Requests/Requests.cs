@@ -13,6 +13,12 @@ public class CreateUserRequest
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
 }
+public class LinkExternalLoginRequest
+{
+    public string LoginProvider { get; set; }
+    public string ProviderKey { get; set; }
+    public string? ProviderDisplayName { get; set; }
+}
 public class RoleRequest
 {
     public string RoleName { get; set; }
@@ -105,4 +111,46 @@ public class UpdateAccessGroupRequest
     public string Name { get; set; }
     public string Description { get; set; }
     public DateTime? EndDate { get; set; }
+}
+public class UpdateUserRequest
+{
+    public string FirstName { get; set; }
+    public string LastName { get; set; }
+    public string Email { get; set; }
+    public string? PhoneNumber { get; set; }
+    public string DomicileUnitId { get; set; }
+    public DateTime? StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
+}
+public class UpdateRoleRequest
+{
+    public string Name { get; set; }
+    public string Description { get; set; }
+}
+public class CreatePermissionRequest
+{
+    public string PermissionTypeId { get; set; }
+    public string SubPermissionId { get; set; }
+    public string? Description { get; set; }
+}
+public class UpdatePermissionTypeRequest
+{
+    public string Name { get; set; }
+    public string Description { get; set; }
+}
+public class UpdateSubPermissionRequest
+{
+    public string Name { get; set; }
+    public string Description { get; set; }
+}
+public class UpdateOrganizationUnitTypeRequest
+{
+    public string Name { get; set; }
+    public string Description { get; set; }
+    public bool IsSubsidiary { get; set; }
+}
+public class UpdateAssignmentScopeRequest
+{
+    public string ScopeOrganizationUnitId { get; set; }
+    public bool CascadeOrgStructure { get; set; }
 }

@@ -22,6 +22,9 @@ public class PermissionAssignmentService : IPermissionAssignmentService
     public async Task<RoleDto[]> GetUserRolesAsync(string userId)
     {
         var now = DateTime.UtcNow;
+        var user = await _uow.Repository<BshUser>().FirstOrDefaultAsync(u => u.Id == userId);
+        if (user == null || user.StartDate > now || (user.EndDate != null && user.EndDate < now)) return [];
+
         var assignments = await _uow.Repository<UserRole>().FindAsync(
             ur => ur.UserId == userId
                 && ur.Status == AssignmentStatus.Active
@@ -56,6 +59,9 @@ public class PermissionAssignmentService : IPermissionAssignmentService
     public async Task<PermissionDto[]> GetUserPermissionsAsync(string userId)
     {
         var now = DateTime.UtcNow;
+        var user = await _uow.Repository<BshUser>().FirstOrDefaultAsync(u => u.Id == userId);
+        if (user == null || user.StartDate > now || (user.EndDate != null && user.EndDate < now)) return [];
+
         var permissions = new Dictionary<string, (string Description, List<IReadOnlySet<string>> Scopes)>(StringComparer.OrdinalIgnoreCase);
 
         var roleAssignments = await _uow.Repository<UserRole>().FindAsync(
@@ -130,10 +136,15 @@ public class PermissionAssignmentService : IPermissionAssignmentService
         var exists = await _uow.Repository<RolePermission>().AnyAsync(rp => rp.RoleId == roleId && rp.PermissionId == permissionId);
         if (!exists)
         {
+            var now = DateTime.UtcNow;
             await _uow.Repository<RolePermission>().AddAsync(new RolePermission
             {
                 RoleId = roleId,
-                PermissionId = permissionId
+                PermissionId = permissionId,
+                CreatedAt = now,
+                UpdatedAt = now,
+                CreatedBy = "system",
+                LastUpdatedBy = "system"
             });
             await _uow.SaveChangesAsync();
             await _permissionVersionService.BumpRoleUsersAsync(roleId);

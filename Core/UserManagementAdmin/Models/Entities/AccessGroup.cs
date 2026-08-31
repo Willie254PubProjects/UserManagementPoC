@@ -12,5 +12,6 @@ namespace UserManagementAdmin.Models.Entities
 
         public IEnumerable<AccessGroupPermission> Permissions { get; set; }
         public IEnumerable<AccessGroupRole> Roles { get; set; }
+        public IEnumerable<UserAccessGroup> Users { get; set; }
     }
 }

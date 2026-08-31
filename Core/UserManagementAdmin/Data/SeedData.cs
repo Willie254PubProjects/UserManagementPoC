@@ -20,7 +20,7 @@ public static class SeedData
 
         var permissionTypes = new Dictionary<string, PermissionType>();
         foreach (var (name, desc) in new[] {
-            ("CardPrinting", "Card printing operations"), ("Account", "Account operations"), ("CardRequest", "Card request operations")
+            ("CardPrinting", "Card printing operations"), ("CardRequest", "Card request operations")
         })
         {
             var pt = new PermissionType
@@ -129,7 +129,6 @@ public static class SeedData
         AddUnit("group", "Demo Group Holdings", "Group holding company root", "Group", "0001", "KE");
         AddUnit("ke", "KE Subsidiary", "Kenya subsidiary", "Subsidiary", "KE", "KE", "group");
         AddUnit("ke-ops", "Kenya Operations", "Kenya operations department", "Department", "0002", "KE", "ke");
-        AddUnit("ke-tech", "Kenya Technology", "Kenya technology department", "Department", "0003", "KE", "ke");
         AddUnit("nairobi", "Nairobi Regional Branch", "Nairobi region", "RegionalBranch", "0004", "KE", "ke");
         AddUnit("nairobi-hq", "Nairobi HQ Branch", "Nairobi headquarters branch", "Branch", "0005", "KE", "nairobi");
         AddUnit("westlands", "Westlands Branch", "Westlands branch", "Branch", "0006", "KE", "nairobi");
@@ -303,17 +302,6 @@ public static class SeedData
                 PermissionId = permission.Id
             });
         }
-        var accountCreate = allPermissions.First(p => p.PermissionTypeId == permissionTypes["Account"].Id && p.SubPermissionId == subPermissions["Create"].Id);
-        var accountView = allPermissions.First(p => p.PermissionTypeId == permissionTypes["Account"].Id && p.SubPermissionId == subPermissions["View"].Id);
-        var accountApprove = allPermissions.First(p => p.PermissionTypeId == permissionTypes["Account"].Id && p.SubPermissionId == subPermissions["Approve"].Id);
-        foreach (var permission in new[] { accountCreate, accountView, accountApprove })
-        {
-            context.Set<AccessGroupPermission>().Add(new AccessGroupPermission
-            {
-                AccessGroupId = corporateGroup.Id,
-                PermissionId = permission.Id
-            });
-        }
 
         context.Set<UserAccessGroup>().Add(new UserAccessGroup
         {
@@ -375,7 +363,6 @@ public static class SeedData
         var managerPermissions = new[]
         {
             ("CardRequest", "Create"), ("CardRequest", "View"), ("CardRequest", "Edit"), ("CardRequest", "Submit"), ("CardRequest", "Approve"),
-            ("Account", "View"), ("Account", "Create"), ("Account", "Edit"), ("Account", "Submit"),
             ("CardPrinting", "View"), ("CardPrinting", "Invoke")
         };
         foreach (var (ptName, spName) in managerPermissions)

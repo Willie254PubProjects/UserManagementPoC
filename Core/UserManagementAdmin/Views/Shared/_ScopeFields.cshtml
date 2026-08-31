@@ -1,0 +1,19 @@
+<div class="row g-2">
+    <div class="col-md-7">
+        <label class="form-label small text-muted mb-1">Scope org unit</label>
+        <select name="scopeOrganizationUnitId" class="form-select form-select-sm" required>
+            <option value="">-- select org unit --</option>
+            @foreach (var item in (IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>)ViewData["OrgUnits"])
+            {
+                <option value="@item.Value">@item.Text</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-5">
+        <label class="form-label small text-muted mb-1">Cascade structure</label>
+        <select name="cascadeOrgStructure" class="form-select form-select-sm">
+            <option value="false">No</option>
+            <option value="true">Yes</option>
+        </select>
+    </div>
+</div>

@@ -1,0 +1,83 @@
+@model UserManagementAdmin.Models.Entities.BshRole
+@using UserManagementPoC.Shared.Security.Models
+@{
+    ViewData["Title"] = "Role details";
+    var id = Context.Request.RouteValues["id"]?.ToString();
+    var users = (UserManagementPoC.Shared.Models.PagedResponse<UserInfo>)ViewBag.Users;
+}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">@Model.Name</h1>
+    <div class="d-flex gap-2">
+        <a asp-action="Edit" asp-route-id="@id" class="btn btn-sm btn-outline-secondary">Edit</a>
+        <a asp-action="Index" class="btn btn-sm btn-outline-secondary">Back to list</a>
+    </div>
+</div>
+<p class="text-muted">@Model.Description</p>
+
+<div class="row g-3">
+    <div class="col-lg-5">
+        <div class="card shadow-sm">
+            <div class="card-header">Permissions</div>
+            <div class="card-body">
+                <form asp-action="AssignPermission" asp-route-id="@id" method="post" class="d-flex gap-2 mb-3">
+                    <select name="permissionId" class="form-select form-select-sm" required>
+                        <option value="">-- assign permission --</option>
+                        @foreach (var item in (IEnumerable<SelectListItem>)ViewData["Permissions"]) { <option value="@item.Value">@item.Text</option> }
+                    </select>
+                    <button class="btn btn-sm btn-primary text-nowrap" type="submit">Assign</button>
+                </form>
+                <table class="table table-sm align-middle mb-0">
+                    <tbody>
+                        @foreach (var rp in Model.Permissions ?? Enumerable.Empty<UserManagementAdmin.Models.Entities.RolePermission>())
+                        {
+                            <tr>
+                                <td>@(rp.Permission?.Code ?? rp.PermissionId)</td>
+                                <td class="text-end">
+                                    <form asp-action="RemovePermission" asp-route-id="@id" method="post" class="d-inline">
+                                        <input type="hidden" name="permissionId" value="@rp.PermissionId" />
+                                        <button class="btn btn-sm btn-outline-danger" type="submit">Remove</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                        @if (Model.Permissions == null || !Model.Permissions.Any())
+                        {
+                            <tr><td class="text-center text-muted py-3">No permissions assigned.</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="card shadow-sm">
+            <div class="card-header">Users with this role</div>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead><tr><th>Name</th><th>Username</th><th>Email</th><th>Bank / Branch</th></tr></thead>
+                    <tbody>
+                        @foreach (var u in users.Items)
+                        {
+                            <tr>
+                                <td>@u.DisplayName</td>
+                                <td>@u.UserName</td>
+                                <td>@u.Email</td>
+                                <td class="small">@u.BankId / @u.BranchId</td>
+                            </tr>
+                        }
+                        @if (!users.Items.Any())
+                        {
+                            <tr><td colspan="4" class="text-center text-muted py-3">No users hold this role.</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        @await Html.PartialAsync("_Pagination", new UserManagementAdmin.Models.ViewModels.PaginationViewModel
+        {
+            Page = users.Page,
+            TotalPages = users.TotalPages,
+            Action = "Details"
+        })
+    </div>
+</div>

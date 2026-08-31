@@ -7,6 +7,7 @@ public interface IAccessGroupService
 {
     Task<PagedResponse<AccessGroup>> GetAllAsync(int page = 1, int pageSize = 20);
     Task<AccessGroup?> GetByIdAsync(string id);
+    Task<PagedResponse<UserAccessGroup>> GetUsersAsync(string accessGroupId, int page = 1, int pageSize = 20);
     Task<AdminResult<AccessGroup>> CreateAsync(string name, string description, DateTime? startDate = null, DateTime? endDate = null);
     Task<AdminResult<AccessGroup>> UpdateAsync(string id, string name, string description, DateTime? endDate);
     Task<AdminResult<bool>> DeleteAsync(string id);

@@ -1,0 +1,74 @@
+@model System.Collections.Generic.IEnumerable<UserManagementAdmin.Models.Entities.OrganizationUnitType>
+@{
+    ViewData["Title"] = "Organization unit types";
+}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">Organization unit types</h1>
+    <a asp-action="Index" class="btn btn-sm btn-outline-secondary">Back to units</a>
+</div>
+
+<div class="card shadow-sm mb-4" style="max-width: 620px;">
+    <div class="card-header">New unit type</div>
+    <div class="card-body">
+        <form asp-action="CreateType" method="post">
+            <div class="row g-2">
+                <div class="col-md-4">
+                    <input name="Name" class="form-control" placeholder="Name" required />
+                </div>
+                <div class="col-md-5">
+                    <input name="Description" class="form-control" placeholder="Description" />
+                </div>
+                <div class="col-md-2">
+                    <select name="IsSubsidiary" class="form-select">
+                        <option value="false">Not subsidiary</option>
+                        <option value="true">Subsidiary</option>
+                    </select>
+                </div>
+                <div class="col-md-1">
+                    <button class="btn btn-primary w-100" type="submit">Create</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+            <thead><tr><th>Name</th><th>Description</th><th>Subsidiary</th><th class="text-end">Actions</th></tr></thead>
+            <tbody>
+                @foreach (var t in Model)
+                {
+                    <tr>
+                        <td colspan="4" class="p-2">
+                            <div class="row g-2 align-items-center">
+                                <form asp-action="EditType" asp-route-id="@t.Id" method="post" class="col-md-10">
+                                    <div class="row g-2 align-items-center">
+                                        <div class="col-md-3">
+                                            <input name="Name" value="@t.Name" class="form-control form-control-sm" required />
+                                        </div>
+                                        <div class="col-md-5">
+                                            <input name="Description" value="@t.Description" class="form-control form-control-sm" />
+                                        </div>
+                                        <div class="col-md-2">
+                                            <select name="IsSubsidiary" class="form-select form-select-sm">
+                                                <option value="false" selected="@(t.IsSubsidiary == false)">Not subsidiary</option>
+                                                <option value="true" selected="@(t.IsSubsidiary == true)">Subsidiary</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <button class="btn btn-sm btn-outline-primary w-100" type="submit">Save</button>
+                                        </div>
+                                    </div>
+                                </form>
+                                <form asp-action="DeleteType" asp-route-id="@t.Id" method="post" class="col-md-2" onsubmit="return confirm('Delete unit type @t.Name?')">
+                                    <button class="btn btn-sm btn-outline-danger w-100" type="submit">Delete</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

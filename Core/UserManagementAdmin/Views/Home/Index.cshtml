@@ -1,8 +1,57 @@
 ﻿@{
-    ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "Dashboard";
 }
+<h1>Dashboard</h1>
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="row g-3">
+    <div class="col-md-3">
+        <div class="card shadow-sm stat-card">
+            <div class="card-body">
+                <div class="card-title text-muted">Users</div>
+                <div class="display-6">@ViewBag.UserCount</div>
+                <a asp-controller="UsersAdmin" asp-action="Index" class="small">Manage users &rarr;</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm stat-card">
+            <div class="card-body">
+                <div class="card-title text-muted">Roles</div>
+                <div class="display-6">@ViewBag.RoleCount</div>
+                <a asp-controller="RolesAdmin" asp-action="Index" class="small">Manage roles &rarr;</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm stat-card">
+            <div class="card-body">
+                <div class="card-title text-muted">Access groups</div>
+                <div class="display-6">@ViewBag.GroupCount</div>
+                <a asp-controller="AccessGroupsAdmin" asp-action="Index" class="small">Manage groups &rarr;</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm stat-card">
+            <div class="card-body">
+                <div class="card-title text-muted">Permissions</div>
+                <div class="display-6">@ViewBag.PermissionCount</div>
+                <a asp-controller="PermissionsAdmin" asp-action="Index" class="small">View catalogue &rarr;</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm mt-4">
+    <div class="card-body">
+        <h6 class="card-title">Admin console</h6>
+        <p class="text-muted mb-2">Manage users, roles, permissions, organization units, and access groups. All operations are protected by the same SSO identity the rest of the platform uses.</p>
+        <ul class="small mb-0">
+            <li><strong>Users</strong> &mdash; create, edit, deactivate, delete, and assign roles / permissions / access groups (with resource scope).</li>
+            <li><strong>Roles</strong> &mdash; create, rename, assign permissions, and see who holds each role.</li>
+            <li><strong>Permissions</strong> &mdash; browse the catalogue, manage permission types and sub-permissions (new entries auto-generate the matrix).</li>
+            <li><strong>Org units</strong> &mdash; maintain the organization hierarchy and unit types.</li>
+            <li><strong>Access groups</strong> &mdash; group roles, permissions, and scoped users.</li>
+        </ul>
+    </div>
 </div>

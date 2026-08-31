@@ -1,0 +1,63 @@
+@model System.Collections.Generic.List<UserManagementAdmin.Models.Entities.SubPermission>
+@{
+    ViewData["Title"] = "Sub-permissions";
+}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">Sub-permissions</h1>
+    <a asp-action="Index" class="btn btn-sm btn-outline-secondary">Back to catalogue</a>
+</div>
+
+<div class="card shadow-sm mb-4" style="max-width: 560px;">
+    <div class="card-header">New sub-permission</div>
+    <div class="card-body">
+        <form asp-action="CreateSub" method="post">
+            <div class="row g-2">
+                <div class="col-md-4">
+                    <input name="Name" class="form-control" placeholder="Verb, e.g. View" required />
+                </div>
+                <div class="col-md-6">
+                    <input name="Description" class="form-control" placeholder="Description" />
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-primary w-100" type="submit">Create</button>
+                </div>
+            </div>
+        </form>
+        <div class="small text-muted mt-2">Creating a sub-permission auto-generates a permission for every permission type (the full matrix).</div>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+            <thead><tr><th>Name</th><th>Description</th><th class="text-end">Actions</th></tr></thead>
+            <tbody>
+                @foreach (var s in Model)
+                {
+                    <tr>
+                        <td colspan="3" class="p-2">
+                            <div class="row g-2 align-items-center">
+                                <form asp-action="EditSub" asp-route-id="@s.Id" method="post" class="col-md-10">
+                                    <div class="row g-2 align-items-center">
+                                        <div class="col-md-3">
+                                            <input name="Name" value="@s.Name" class="form-control form-control-sm" required />
+                                        </div>
+                                        <div class="col-md-7">
+                                            <input name="Description" value="@s.Description" class="form-control form-control-sm" />
+                                        </div>
+                                        <div class="col-md-2">
+                                            <button class="btn btn-sm btn-outline-primary w-100" type="submit">Save</button>
+                                        </div>
+                                    </div>
+                                </form>
+                                <form asp-action="DeleteSub" asp-route-id="@s.Id" method="post" class="col-md-2" onsubmit="return confirm('Delete sub-permission @s.Name?')">
+                                    <button class="btn btn-sm btn-outline-danger w-100" type="submit">Delete</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -4,10 +4,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using UserManagementAdmin.Models.Entities;
-using UserManagementAdmin.Services;
+using UserManagementAdmin.Models.Requests;
 using UserManagementAdmin.Services.Interfaces;
 using UserManagementPoC.Shared.Extensions;
-using UserManagementPoC.Shared.Security.Contracts;
 using UserManagementPoC.Shared.Security.Models;
 
 namespace UserManagementAdmin.Controllers;
@@ -18,17 +17,15 @@ namespace UserManagementAdmin.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly UserManager<BshUser> _userManager;
-    private readonly SignInManager<BshUser> _signInManager;
-    private readonly IEncryptionService _encryptionService;
+    private readonly IUserService _userService;
     private readonly IUserSessionService _userSessionService;
     private readonly IPermissionAssignmentService _permissionAssignmentService;
     private readonly IOrganizationUnitService _organizationUnitService;
 
-    public AuthController(UserManager<BshUser> userManager, SignInManager<BshUser> signInManager, IEncryptionService encryptionService, IUserSessionService userSessionService, IPermissionAssignmentService permissionAssignmentService, IOrganizationUnitService organizationUnitService)
+    public AuthController(UserManager<BshUser> userManager, IUserService userService, IUserSessionService userSessionService, IPermissionAssignmentService permissionAssignmentService, IOrganizationUnitService organizationUnitService)
     {
         _userManager = userManager;
-        _signInManager = signInManager;
-        _encryptionService = encryptionService;
+        _userService = userService;
         _userSessionService = userSessionService;
         _permissionAssignmentService = permissionAssignmentService;
         _organizationUnitService = organizationUnitService;
@@ -52,28 +49,47 @@ public class AuthController : ControllerBase
     }
 
     [AllowAnonymous]
-    [EnableRateLimiting("auth")]
-    [HttpPost("verify-credentials")]
-    public async Task<IActionResult> VerifyCredentials([FromBody] VerifyCredentialsRequest request)
+    [HttpGet("users/by-login")]
+    public async Task<IActionResult> FindByExternalLogin([FromQuery] string provider, [FromQuery] string providerKey)
     {
-        var password = _encryptionService.Decrypt(request.EncryptedPassword, request.Iv);
-        var user = await _userManager.Users
-            .FirstOrDefaultAsync(u => u.NormalizedUserName == _userManager.NormalizeName(request.Username)
-                || u.NormalizedEmail == _userManager.NormalizeEmail(request.Username));
-        if (user == null) return this.ApiOk(new VerifyCredentialsResponse
-        {
-            Success = false, ErrorMessage = "Invalid credentials"
-        });
-        var result = await _signInManager.CheckPasswordSignInAsync(user, password, true);
-        if (!result.Succeeded) return this.ApiOk(new VerifyCredentialsResponse
-        {
-            Success = false, ErrorMessage = "Invalid credentials"
-        });
-        return this.ApiOk(new VerifyCredentialsResponse
-        {
-            Success = true,
-            User = await MapToUserInfoAsync(user)
-        });
+        var user = await _userService.FindByExternalLoginAsync(provider, providerKey);
+        if (user == null) return this.ApiNotFound();
+        return this.ApiOk(user);
+    }
+
+    [AllowAnonymous]
+    [HttpGet("users/by-email")]
+    public async Task<IActionResult> FindByEmail([FromQuery] string email)
+    {
+        var user = await _userService.FindByEmailAsync(email);
+        if (user == null) return this.ApiNotFound();
+        return this.ApiOk(user);
+    }
+
+    [AllowAnonymous]
+    [HttpGet("org-units/resolve")]
+    public async Task<IActionResult> ResolveOrgUnit([FromQuery] string value)
+    {
+        var scope = await _organizationUnitService.ResolveScopeByCodeAsync(value);
+        return this.ApiOk(scope);
+    }
+
+    [AllowAnonymous]
+    [HttpGet("users/{userId}/domicile-scope")]
+    public async Task<IActionResult> GetDomicileScope(string userId)
+    {
+        var scope = await _userService.GetDomicileScopeAsync(userId);
+        return this.ApiOk(scope);
+    }
+
+    [AllowAnonymous]
+    [EnableRateLimiting("auth")]
+    [HttpPost("users/{userId}/logins")]
+    public async Task<IActionResult> LinkExternalLogin(string userId, [FromBody] LinkExternalLoginRequest request)
+    {
+        var linked = await _userService.LinkExternalLoginAsync(userId, request.LoginProvider, request.ProviderKey, request.ProviderDisplayName);
+        if (!linked) return this.ApiBadRequest("External login link failed", null);
+        return this.ApiOk("External login linked");
     }
 
     [AllowAnonymous]

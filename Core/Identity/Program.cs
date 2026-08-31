@@ -1,6 +1,9 @@
 using System.Text;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using UserManagementPoC.Identity.Services;
@@ -13,11 +16,13 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
+var oidcSettings = builder.Configuration.GetSection("OpenIdConnect");
 var secretKey = Encoding.UTF8.GetBytes(jwtSettings["SecretKey"]!);
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
     options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
 
 }).AddJwtBearer(options =>
 {
@@ -32,6 +37,57 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(secretKey)
     };
 
+}).AddCookie(CookieAuthenticationDefaults.AuthenticationScheme)
+.AddOpenIdConnect(OpenIdConnectDefaults.AuthenticationScheme, options =>
+{
+    options.Authority = oidcSettings["Authority"];
+    options.ClientId = oidcSettings["ClientId"];
+    options.ClientSecret = oidcSettings["ClientSecret"];
+    options.ResponseType = OpenIdConnectResponseType.Code;
+    options.GetClaimsFromUserInfoEndpoint = true;
+    options.SaveTokens = true;
+    options.MapInboundClaims = false;
+    options.Scope.Add("openid");
+    options.Scope.Add("profile");
+    options.Scope.Add("email");
+
+    options.Events = new OpenIdConnectEvents
+    {
+        OnTicketReceived = async context =>
+        {
+            var ssoService = context.HttpContext.RequestServices.GetRequiredService<SsoService>();
+            var codeService = context.HttpContext.RequestServices.GetRequiredService<AuthorizationCodeService>();
+
+            string? clientId = null;
+            if (context.Properties?.Items.TryGetValue("client_id", out var cid) == true)
+            {
+                clientId = cid;
+            }
+            var returnUrl = context.Properties?.RedirectUri;
+            if (string.IsNullOrWhiteSpace(returnUrl))
+            {
+                returnUrl = SsoService.ResolveDefaultReturnUrl(clientId, builder.Configuration);
+            }
+
+            var loginResult = await ssoService.CompleteLoginAsync(context.Principal);
+
+            context.HandleResponse();
+
+            var validated = SsoService.ValidateReturnUrl(returnUrl, clientId, builder.Configuration);
+            if (loginResult == null || validated == null)
+            {
+                var reason = loginResult == null ? "no_matching_user" : "return_url_not_permitted";
+                var errorTarget = SsoService.ResolveErrorTarget(returnUrl, clientId, builder.Configuration);
+                var errorSeparator = errorTarget.Contains('?') ? '&' : '?';
+                context.Response.Redirect($"{errorTarget}{errorSeparator}error=access_denied&reason={reason}");
+                return;
+            }
+
+            var code = await codeService.GenerateAsync(loginResult.User.Id, loginResult.SecurityVersion, clientId ?? "identity");
+            var separator = validated.Contains('?') ? '&' : '?';
+            context.Response.Redirect($"{validated}{separator}code={Uri.EscapeDataString(code)}");
+        }
+    };
 });
 builder.Services.AddAuthorization();
 builder.Services.AddControllers();
@@ -57,7 +113,8 @@ builder.Services.AddScoped<IKeyVaultService, ConfigKeyVaultService>();
 builder.Services.AddSharedSecurity();
 builder.Services.AddScoped<ITokenGenerator, TokenService>();
 builder.Services.AddScoped<ITokenValidator, TokenService>();
-builder.Services.AddScoped<IUserAuthenticator, AuthenticationService>();
+builder.Services.AddScoped<SsoService>();
+builder.Services.AddSingleton<AuthorizationCodeService>();
 builder.Services.AddMemoryCache();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<ICacheService, MemoryCacheService>();

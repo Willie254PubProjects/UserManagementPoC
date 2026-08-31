@@ -1,0 +1,30 @@
+@model UserManagementAdmin.Models.Requests.UpdateAccessGroupRequest
+@{
+    ViewData["Title"] = "Edit access group";
+    var id = Context.Request.RouteValues["id"]?.ToString();
+}
+<h1>Edit access group</h1>
+<div class="card shadow-sm" style="max-width: 520px;">
+    <div class="card-body">
+        <form asp-action="Edit" asp-route-id="@id" method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+            <div class="mb-3">
+                <label asp-for="Name" class="form-label"></label>
+                <input asp-for="Name" class="form-control" />
+                <span asp-validation-for="Name" class="text-danger small"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="Description" class="form-label"></label>
+                <input asp-for="Description" class="form-control" />
+            </div>
+            <div class="mb-3">
+                <label asp-for="EndDate" class="form-label"></label>
+                <input asp-for="EndDate" class="form-control" type="date" />
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-primary" type="submit">Save</button>
+                <a asp-action="Details" asp-route-id="@id" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using UserManagementAdmin.Extensions;
+using UserManagementAdmin.Models.Entities;
 using UserManagementAdmin.Models.Requests;
 using UserManagementAdmin.Services.Interfaces;
 using UserManagementPoC.Shared.Extensions;
@@ -28,6 +29,24 @@ public class RolesController : ControllerBase
         return this.ApiOk(roles);
     }
 
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetById(string id)
+    {
+        var role = await _roleService.GetByIdAsync(id);
+        if (role == null) return this.ApiNotFound();
+        return this.ApiOk(new
+        {
+            role.Id,
+            role.Name,
+            role.Description,
+            Permissions = (role.Permissions ?? Enumerable.Empty<RolePermission>()).Select(rp => new
+            {
+                rp.PermissionId,
+                rp.Permission?.Code
+            })
+        });
+    }
+
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateRoleRequest request)
     {
@@ -36,12 +55,27 @@ public class RolesController : ControllerBase
         return this.ApiOk("Role created");
     }
 
+    [HttpPut("{id}")]
+    public async Task<IActionResult> Update(string id, [FromBody] UpdateRoleRequest request)
+    {
+        var result = await _roleService.UpdateAsync(id, request.Name, request.Description);
+        if (!result.Succeeded) return this.ApiBadRequest(result, "Role update failed");
+        return this.ApiOk("Role updated");
+    }
+
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(string id)
     {
         var result = await _roleService.DeleteAsync(id);
         if (!result.Succeeded) return this.ApiBadRequest(result, "Role deletion failed");
         return this.ApiOk("Role deleted");
+    }
+
+    [HttpGet("{id}/users")]
+    public async Task<IActionResult> GetUsers(string id, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+    {
+        var users = await _roleService.GetUsersAsync(id, page, pageSize);
+        return this.ApiOk(users);
     }
 
     [HttpPost("{id}/permissions")]

@@ -1,0 +1,13 @@
+.status-badge {
+    min-width: 3.5rem;
+}
+
+.result-msg {
+    max-width: 320px;
+    word-break: break-all;
+    white-space: pre-wrap;
+}
+
+#error-box {
+    margin-bottom: 0;
+}

@@ -1,0 +1,282 @@
+@model UserManagementPoC.Shared.Security.Models.UserInfo
+@using UserManagementAdmin.Models.Entities
+@using UserManagementPoC.Shared.Authorization.DTOs
+@inject UserManagementAdmin.Services.Interfaces.IOrganizationUnitService OrgUnitService
+@{
+    ViewData["Title"] = "User details";
+    var id = Context.Request.RouteValues["id"]?.ToString();
+    var entity = (BshUser?)ViewBag.UserEntity;
+    var inactive = entity != null && entity.EndDate != null && entity.EndDate <= DateTime.UtcNow;
+}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">@Model.DisplayName</h1>
+    <div class="d-flex gap-2">
+        <a asp-action="Edit" asp-route-id="@id" class="btn btn-sm btn-outline-secondary">Edit</a>
+        <a asp-action="Index" class="btn btn-sm btn-outline-secondary">Back to list</a>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3"><div class="card shadow-sm stat-card"><div class="card-body"><div class="card-title">Username</div><div class="fs-5">@Model.UserName</div></div></div></div>
+    <div class="col-md-3"><div class="card shadow-sm stat-card"><div class="card-body"><div class="card-title">Email</div><div class="fs-5">@Model.Email</div></div></div></div>
+    <div class="col-md-3"><div class="card shadow-sm stat-card"><div class="card-body"><div class="card-title">Bank / Branch</div><div class="fs-5">@Model.BankId / @Model.BranchId</div></div></div></div>
+    <div class="col-md-3"><div class="card shadow-sm stat-card"><div class="card-body"><div class="card-title">Status</div><div class="fs-5">
+        @if (inactive) { <span class="badge text-bg-danger">Inactive</span> } else { <span class="badge text-bg-success">Active</span> }
+    </div></div></div></div>
+</div>
+
+<ul class="nav nav-tabs mb-3" role="tablist">
+    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#roles" type="button">Roles</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#permissions" type="button">Permissions</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#accessgroups" type="button">Access groups</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#logins" type="button">External logins</button></li>
+    <li class="nav-item"><button class="nav-link text-danger" data-bs-toggle="tab" data-bs-target="#danger" type="button">Danger zone</button></li>
+</ul>
+
+<div class="tab-content">
+    <div class="tab-pane fade show active" id="roles">
+        <div class="row g-3">
+            <div class="col-lg-4">
+                <div class="card shadow-sm">
+                    <div class="card-header">Assign role</div>
+                    <div class="card-body">
+                        <form asp-action="AssignRole" asp-route-id="@id" method="post">
+                            <div class="mb-3">
+                                <label class="form-label small text-muted mb-1">Role</label>
+                                <select name="roleId" class="form-select form-select-sm" required>
+                                    <option value="">-- select --</option>
+                                    @foreach (var item in (IEnumerable<SelectListItem>)ViewData["RoleOptions"]) { <option value="@item.Value">@item.Text</option> }
+                                </select>
+                            </div>
+                            @await Html.PartialAsync("_ScopeFields")
+                            <button class="btn btn-sm btn-primary mt-3" type="submit">Assign role</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-8">
+                <div class="card shadow-sm">
+                    <div class="card-header">Assigned roles (per scope)</div>
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead><tr><th>Role</th><th>Scope</th><th>Edit / Remove</th></tr></thead>
+                            <tbody>
+                                @foreach (var ur in (IEnumerable<UserRole>)ViewBag.RoleAssignments)
+                                {
+                                    <tr>
+                                        <td>@(ur.Role?.Name ?? ur.RoleId)</td>
+                                        <td class="small text-muted">@string.Join(", ", await OrgUnitService.ResolveScopeAsync(ur.ScopeOrganizationUnitId, ur.CascadeOrgStructure))</td>
+                                        <td class="text-end">
+                                            @await Html.PartialAsync("_AssignmentScopeEdit", new UserManagementAdmin.Models.ViewModels.AssignmentScopeEdit
+                                            {
+                                                AssignmentId = ur.Id,
+                                                ScopeOrganizationUnitId = ur.ScopeOrganizationUnitId,
+                                                CascadeOrgStructure = ur.CascadeOrgStructure,
+                                                UpdateAction = "UpdateRoleScope",
+                                                RemoveAction = "RemoveRoleAssignment"
+                                            })
+                                        </td>
+                                    </tr>
+                                }
+                                @if (!((IEnumerable<UserRole>)ViewBag.RoleAssignments).Any())
+                                {
+                                    <tr><td colspan="3" class="text-center text-muted py-3">No roles assigned.</td></tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-pane fade" id="permissions">
+        <div class="row g-3">
+            <div class="col-lg-4">
+                <div class="card shadow-sm mb-3">
+                    <div class="card-header">Assign permission</div>
+                    <div class="card-body">
+                        <form asp-action="AssignPermission" asp-route-id="@id" method="post">
+                            <div class="mb-3">
+                                <label class="form-label small text-muted mb-1">Permission</label>
+                                <select name="permissionId" class="form-select form-select-sm" required>
+                                    <option value="">-- select --</option>
+                                    @foreach (var item in (IEnumerable<SelectListItem>)ViewData["PermissionOptions"]) { <option value="@item.Value">@item.Text</option> }
+                                </select>
+                            </div>
+                            @await Html.PartialAsync("_ScopeFields")
+                            <button class="btn btn-sm btn-primary mt-3" type="submit">Assign permission</button>
+                        </form>
+                    </div>
+                </div>
+                <div class="card shadow-sm">
+                    <div class="card-header">Direct permission assignments</div>
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead><tr><th>Permission</th><th>Scope</th><th>Edit / Remove</th></tr></thead>
+                            <tbody>
+                                @foreach (var dp in (IEnumerable<UserPermission>)ViewBag.DirectPermissions)
+                                {
+                                    <tr>
+                                        <td>@(dp.Permission?.Code ?? dp.PermissionId)</td>
+                                        <td class="small text-muted">@string.Join(", ", await OrgUnitService.ResolveScopeAsync(dp.ScopeOrganizationUnitId, dp.CascadeOrgStructure))</td>
+                                        <td class="text-end">
+                                            @await Html.PartialAsync("_AssignmentScopeEdit", new UserManagementAdmin.Models.ViewModels.AssignmentScopeEdit
+                                            {
+                                                AssignmentId = dp.Id,
+                                                ScopeOrganizationUnitId = dp.ScopeOrganizationUnitId,
+                                                CascadeOrgStructure = dp.CascadeOrgStructure,
+                                                UpdateAction = "UpdatePermissionScope",
+                                                RemoveAction = "RemovePermissionAssignment"
+                                            })
+                                        </td>
+                                    </tr>
+                                }
+                                @if (!((IEnumerable<UserPermission>)ViewBag.DirectPermissions).Any())
+                                {
+                                    <tr><td colspan="3" class="text-center text-muted py-3">No direct assignments.</td></tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-8">
+                <div class="card shadow-sm">
+                    <div class="card-header">Effective permissions (roles, groups, and direct)</div>
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead><tr><th>Permission</th><th>Scope</th></tr></thead>
+                            <tbody>
+                                @foreach (var p in (IEnumerable<PermissionDto>)ViewBag.Permissions)
+                                {
+                                    <tr>
+                                        <td>@p.Code</td>
+                                        <td class="small text-muted">@string.Join(", ", p.Scope)</td>
+                                    </tr>
+                                }
+                                @if (!((IEnumerable<PermissionDto>)ViewBag.Permissions).Any())
+                                {
+                                    <tr><td colspan="2" class="text-center text-muted py-3">No permissions granted.</td></tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-pane fade" id="accessgroups">
+        <div class="row g-3">
+            <div class="col-lg-4">
+                <div class="card shadow-sm">
+                    <div class="card-header">Assign access group</div>
+                    <div class="card-body">
+                        <form asp-action="AssignAccessGroup" asp-route-id="@id" method="post">
+                            <div class="mb-3">
+                                <label class="form-label small text-muted mb-1">Access group</label>
+                                <select name="accessGroupId" class="form-select form-select-sm" required>
+                                    <option value="">-- select --</option>
+                                    @foreach (var item in (IEnumerable<SelectListItem>)ViewData["AccessGroupOptions"]) { <option value="@item.Value">@item.Text</option> }
+                                </select>
+                            </div>
+                            @await Html.PartialAsync("_ScopeFields")
+                            <button class="btn btn-sm btn-primary mt-3" type="submit">Assign group</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-8">
+                <div class="card shadow-sm">
+                    <div class="card-header">Assigned access groups</div>
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead><tr><th>Group</th><th>Scope</th><th>Edit / Remove</th></tr></thead>
+                            <tbody>
+                                @foreach (var a in (IEnumerable<UserAccessGroup>)ViewBag.AccessGroups)
+                                {
+                                    <tr>
+                                        <td>@(a.AccessGroup?.Name ?? a.AccessGroupId)</td>
+                                        <td class="small text-muted">@string.Join(", ", await OrgUnitService.ResolveScopeAsync(a.ScopeOrganizationUnitId, a.CascadeOrgStructure))</td>
+                                        <td class="text-end">
+                                            @await Html.PartialAsync("_AssignmentScopeEdit", new UserManagementAdmin.Models.ViewModels.AssignmentScopeEdit
+                                            {
+                                                AssignmentId = a.Id,
+                                                ScopeOrganizationUnitId = a.ScopeOrganizationUnitId,
+                                                CascadeOrgStructure = a.CascadeOrgStructure,
+                                                UpdateAction = "UpdateAccessGroupScope",
+                                                RemoveAction = "RemoveAccessGroupAssignment"
+                                            })
+                                        </td>
+                                    </tr>
+                                }
+                                @if (!((IEnumerable<UserAccessGroup>)ViewBag.AccessGroups).Any())
+                                {
+                                    <tr><td colspan="4" class="text-center text-muted py-3">No access groups assigned.</td></tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-pane fade" id="logins">
+        <div class="card shadow-sm">
+            <div class="card-header">External logins</div>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead><tr><th>Provider</th><th>Provider key</th><th></th></tr></thead>
+                    <tbody>
+                        @foreach (var l in (IEnumerable<Microsoft.AspNetCore.Identity.UserLoginInfo>)ViewBag.Logins)
+                        {
+                            <tr>
+                                <td>@l.LoginProvider</td>
+                                <td class="small text-muted">@l.ProviderKey</td>
+                                <td class="text-end">
+                                    <form asp-action="RemoveLogin" asp-route-id="@id" method="post" class="d-inline">
+                                        <input type="hidden" name="loginProvider" value="@l.LoginProvider" />
+                                        <input type="hidden" name="providerKey" value="@l.ProviderKey" />
+                                        <button class="btn btn-sm btn-outline-danger" type="submit">Unlink</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                        @if (!((IEnumerable<Microsoft.AspNetCore.Identity.UserLoginInfo>)ViewBag.Logins).Any())
+                        {
+                            <tr><td colspan="3" class="text-center text-muted py-3">No external logins linked.</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-pane fade" id="danger">
+        <div class="card shadow-sm border-danger">
+            <div class="card-header text-danger">Danger zone</div>
+            <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div>
+                        <strong>Deactivate user</strong>
+                        <div class="small text-muted">Ends the user's validity window and immediately revokes their entitlements.</div>
+                    </div>
+                    <form asp-action="Deactivate" asp-route-id="@id" method="post" onsubmit="return confirm('Deactivate this user?')">
+                        <button class="btn btn-sm btn-warning" type="submit" @(inactive ? "disabled" : "")>Deactivate</button>
+                    </form>
+                </div>
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <strong>Delete user</strong>
+                        <div class="small text-muted">Permanently deletes the user (only allowed with no active assignments or sessions).</div>
+                    </div>
+                    <form asp-action="Delete" asp-route-id="@id" method="post" onsubmit="return confirm('Permanently delete this user?')">
+                        <button class="btn btn-sm btn-danger" type="submit">Delete</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

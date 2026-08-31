@@ -18,7 +18,7 @@ public class SampleWorkflowController : ControllerBase
             Endpoints = new[]
             {
                 "GET /api/sample",
-                "GET /api/sample/{workflow}/{action}                 [AuthorizeWorkflow] (scope via ?bank=&branch=)",
+                "GET /api/sample/{workflow}/{wfAction}         [AuthorizeWorkflow] (scope via ?bank=&branch=)",
                 "GET /api/sample/permission-check                   [AuthorizeAllPermissions]",
                 "GET /api/sample/admin-only                          [AuthorizeAnyRole]",
                 "GET /api/sample/roles/any-of                        [AuthorizeAnyRole]",
@@ -31,13 +31,13 @@ public class SampleWorkflowController : ControllerBase
         });
     }
 
-    [HttpGet("{workflow}/{action}")]
+    [HttpGet("{workflow}/{wfAction}")]
     [AuthorizeWorkflow]
-    public IActionResult ExecuteWorkflow(string workflow, string action)
+    public IActionResult ExecuteWorkflow(string workflow, string wfAction)
     {
         return this.ApiOk(new
         {
-            Message = $"Workflow '{workflow}' action '{action}' authorized",
+            Message = $"Workflow '{workflow}' action '{wfAction}' authorized",
             User = User.Identity?.Name
         });
     }
